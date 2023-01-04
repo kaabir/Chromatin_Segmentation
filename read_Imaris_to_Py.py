@@ -83,6 +83,15 @@ def read_CSV(fil_Nam):
      return df
      df.clear()
 
+def get_Filename(fil_Str):
+    File_Name=fil_Str[50:]
+    index = File_Name.find('Average')
+    index = index - 3 
+    File_Name = File_Name[index:index+2]
+    File_Name = File_Name.split(',') 
+    File_Name = File_Name[0] #extracts the first field
+    return File_Name
+
 # ===============
 # Actin Channel
 # ===============
@@ -92,8 +101,7 @@ actin_files0 = folder_Scan('Actin','T0') # Scan
 for chromoread in chromo_files:
     AC_Chromoread_TO = read_CSV(chromoread)
     #exec(f'AC_Chromoread_TO = read_CSV(chromoread)') 
-    File_Name=chromoread[48:]
-    Imaris_vca["File_Name_VCA"].append(File_Name)
+    Imaris_vca["File_Name_VCA"].append(get_Filename(chromoread))
     Imaris_vca["VCA_chromo_volume_0"].append(AC_Chromoread_TO.loc['Volume','Sum'])
     Imaris_vca["VCA_chromo_count_0"].append(AC_Chromoread_TO.loc['Volume','Count'])
     
@@ -181,8 +189,7 @@ actin_files.clear()
 ctrl_files0 = folder_Scan('Ctrl','T0') # Scan
 for chromoread in chromo_files:
     CT_Chromoread_TO = read_CSV(chromoread)
-    File_Name=chromoread[48:]
-    Imaris_ctrl["File_Name_Ctrl"].append(File_Name)
+    Imaris_ctrl["File_Name_Ctrl"].append(get_Filename(chromoread))
     Imaris_ctrl["Ctrl_chromo_volume_0"].append(CT_Chromoread_TO.loc['Volume','Sum'])
     Imaris_ctrl["Ctrl_chromo_count_0"].append(CT_Chromoread_TO.loc['Volume','Count'])
     
