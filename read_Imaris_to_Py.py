@@ -9,7 +9,16 @@ import glob
 import os
 import csv
 
-Ar_Df = []
+"""
+├── Ctrl
+│   ├── Nuclei├── Volume/Sphericity
+│   └── Chromo└── Count/Volume/
+├── Actin
+│   ├── Nuclei├── Volume/
+│   ├── Chromo├── Count/Volume/
+│   └── Actin └── Area/
+└── Output
+"""
 
 Imaris_vca = {"File_Name_VCA":[],"VCA_chromo_volume_0":[],"VCA_chromo_volume_1":[],"VCA_chromo_volume_2":[],"VCA_chromo_volume_3":[],
            "VCA_chromo_count_0":[],"VCA_chromo_count_1":[],"VCA_chromo_count_2":[],"VCA_chromo_count_3":[],
@@ -23,7 +32,8 @@ Imaris_ctrl = {"File_Name_Ctrl":[],"Ctrl_chromo_volume_0":[],"Ctrl_chromo_volume
           "sphericity_ctrl_0":[],"sphericity_ctrl_1":[],"sphericity_ctrl_2":[],"sphericity_ctrl_3":[]}
             
 # Type- Actin, Ctrl  && Time - T0,T15,T30,T60
-# =============================================================================
+# ===========================================
+
 # Sorting Files
 actin_files =[]
 chromo_files =[]
@@ -55,6 +65,7 @@ def folder_Scan(Type,Time):
                         
                         
 def actin_Coverage(Nuc_Area,Actin_Area):
+           # Pd to np et divide
     Nuclei_area_den = list(map(float, Nuc_Area))
     Act_area_to_Flt = list(map(float, Actin_Area))
     value = 2
@@ -70,7 +81,7 @@ def actin_Coverage(Nuc_Area,Actin_Area):
         Actin_coverage_per = (Actin_area_num[i]/Nuclei_area_den[i])
     return Actin_coverage_per
     #Actin_coverage_per.clear()
-# =============================================================================
+# ==============
 # Reading CSV
 def read_CSV(fil_Nam):
      filename_delimiter = ','
