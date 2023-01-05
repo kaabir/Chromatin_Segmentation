@@ -211,40 +211,83 @@ ax.grid()
 plt.show() 
 
 # =============================================================================
-# # =============================================================================
-# # Actin Coverage
-# # =============================================================================
-# y = [24.3,31.0]
-# y1 = [31.1,26.5]
-# x = range(len(y))
-# 
-# fig, ax = plt.subplots(figsize=(6, 4))
-# 
-# ax.plot(x, y, marker="o", color='#960056', alpha=0.8, linestyle='dashed', label='Nuclei 1')
-# ax.plot(x,y1, marker="s",color='#0b5509',alpha=0.8, linestyle='dashed', label='Nuclei 2')
-# #ax.margins(0.15, 0.15)   
-# ax.set_title('Actin Coverage')
-# for index in range(len(x)):
-#   ax.text(x[index], y[index], y[index], size=12)
-#   ax.text(x[index], y1[index], y1[index], size=12)
-# 
-# categories = ['Actin 30', 'Actin 60']
-# ax.set_xticks(range(len(y)), categories)
-# ax.set_ylabel('Coverage (%)')
-# ax.set_xlabel('Actin time (mins)')
-# 
-# A = [0,0,24,31]
-# A2 = [0,0,31,26]
-# for i in range(len(x)):
-#     if i > 1:
-#         plt.annotate(A[i], (x[i], y[i]), textcoords='offset pixels', size=12)
-#         plt.annotate(A2[i], (x[i], y1[i]), textcoords='offset pixels', size=12)
-# 
-# plt.gca().spines['top'].set_visible(False)
-# plt.gca().spines['right'].set_visible(False)
-# plt.legend()
-# ax.grid()
-# #plt.savefig('Actin_Coverage.png', dpi=300, bbox_inches="tight", pad_inches=0.0)
-# 
-# plt.show()
+# Actin Coverage added Mapped with Nuclei Volume ratio to chromocenter volume
 # =============================================================================
+df_actin = pd.read_excel('C:/Users/kaabi/Documents/Nuceli_Data/Imaris_to_Py/Output/Export_VCA_Excel.xlsx')
+
+Chromo_volume = pd.DataFrame(df_actin, columns= ['VCA_chromo_volume_0','VCA_chromo_volume_1','VCA_chromo_volume_2'])
+Chromo_volume_np = np.array(Chromo_volume)
+
+Nuclei_volume_c = pd.DataFrame(df_actin, columns= ['nuclei_vca_2','nuclei_vca_1','nuclei_vca_0'])
+Nuclei_volume_c_np = np.array(Nuclei_volume_c)
+
+# Ratio of Nuclei Volume Column 2/1 (T60/T30) et 2/0 (T60/T0)
+ratio_2 = np.divide(Nuclei_volume_c_np[:,2],Nuclei_volume_c_np[:,0])
+#ratio_2 = np.insert(ratio_2, 0, 0., axis=0) # Insert zero initally to skip annotation on graph
+ratio_2 =np.round(ratio_2, 2)
+ratio_2 =list(map(str, ratio_2))
+
+ratio_1 = np.divide(Nuclei_volume_c_np[:,1],Nuclei_volume_c_np[:,0])
+#ratio_1 = np.insert(ratio_1, 0, 0., axis=0)
+ratio_1 =np.round(ratio_1, 2)
+ratio_1 =list(map(str, ratio_1))
+
+Coverage_per = pd.DataFrame(df_actin, columns= ['actin_area_60'])
+Coverage_per_np = np.array(Coverage_per)
+
+FileNum = pd.DataFrame(df_actin, columns= ['File_Name_VCA'])
+FileNum_np = np.array(FileNum)
+
+# get annotation coordinates
+ac_2_Y=Chromo_volume_np[:,2] 
+ac_1_Y=Chromo_volume_np[:,1]
+ac_1_Y =list(map(float, ac_1_Y))
+ac_2_X = range(len(ac_2_Y))
+ac_1_X = range(len(ac_1_Y))
+ac_1_X = list(map(float, ac_1_X))
+
+coordinates = [
+    dict(
+        y=Chromo_volume_np[i,:], # Comparing rows of timestamps
+        x= np.arange(0, len(Chromo_volume_np[0]),1),legend =FileNum_np[i],
+        act_Cov=Coverage_per_np[i] )
+        #x=len(Chromo_volume_np[0])
+        
+    for i in range(len(Chromo_volume_np))
+]
+
+fig, ax = plt.subplots(figsize=(6, 4))
+ax2 = ax.twinx()
+for c in coordinates:
+    ax.plot(c['x'], c['y'],marker="o", alpha=0.9, linestyle='dashed',linewidth=0.65, label=c['legend'])
+
+    ax.set_title('Chromocenter Volume (VCA)')
+    categories = ['Actin 0','Actin 15', 'Actin 30']
+    ax.set_xticks(range(len(categories)), categories)
+    ax.set_ylabel('Volume ' r'($\mu m^{3}$)')
+    ax.set_xlabel('Actin time (mins)')
+    #ax.annotate(c['A2'], xy=(0.5, 0.5), xycoords=ax.transAxes)
+    
+    
+    plt.gca().spines['top'].set_visible(False)
+    plt.gca().spines['right'].set_visible(False)
+    plt.legend()
+    ax.legend(loc='center left', bbox_to_anchor=(1.02, 0.5),title="File:",fancybox=True,shadow=True )
+    
+    patches = [ plt.plot([],[], marker='o', ms=2, ls="",c='k', mec=None, 
+            label="{:.2f}".format(float(Coverage_per_np[i])) )[0]  for i in range(len(Coverage_per_np)) ]    
+
+    ax2.legend(handles=patches,loc='center left', bbox_to_anchor=(1.25, 0.5),title="Actin (%)",fancybox=True,shadow=True)
+    ax2.axes.get_yaxis().set_visible(False)
+    
+for i in range(len(ac_2_Y)):
+    print(ratio_1[i])
+    ax.annotate(ratio_1[i], xy=(1, ac_1_Y[i]), textcoords='offset pixels')
+    ax.annotate(ratio_2[i], xy=(2, ac_2_Y[i]), textcoords='offset pixels')
+    #ax.annotate(ratio_1[i], xy=(ac_1_X[i], ac_1_Y[i]), xycoords='data')
+
+ax.set_ylim([0, 3])
+ax.spines[['right', 'top']].set_visible(False)  
+ax.grid()
+#plt.savefig('Chromocenter_Volume_ACTIN.png', dpi=300, bbox_inches="tight", pad_inches=0.0)
+plt.show()      
