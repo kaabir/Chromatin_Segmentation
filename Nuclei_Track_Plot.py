@@ -256,7 +256,7 @@ coordinates = [
     for i in range(len(Chromo_volume_np))
 ]
 
-fig, ax = plt.subplots(figsize=(6, 4))
+fig, ax = plt.subplots(figsize=(6, 6))
 ax2 = ax.twinx()
 for c in coordinates:
     ax.plot(c['x'], c['y'],marker="o", alpha=0.9, linestyle='dashed',linewidth=0.65, label=c['legend'])
@@ -281,13 +281,29 @@ for c in coordinates:
     ax2.axes.get_yaxis().set_visible(False)
     
 for i in range(len(ac_2_Y)):
-    print(ratio_1[i])
+    #print(ratio_1[i])
     ax.annotate(ratio_1[i], xy=(1, ac_1_Y[i]), textcoords='offset pixels')
     ax.annotate(ratio_2[i], xy=(2, ac_2_Y[i]), textcoords='offset pixels')
     #ax.annotate(ratio_1[i], xy=(ac_1_X[i], ac_1_Y[i]), xycoords='data')
+    
+ax.annotate("Nuc. V. T60:T0",
+            xy=(2, 2.8), xycoords='data',
+            xytext=(2, 3), textcoords='data',
+            arrowprops=dict(arrowstyle="-",
+                            connectionstyle="bar,angle=180,fraction=-0.2"))
+ax.annotate("Nuc. V. T30:T0",
+            xy=(1, 2.6), xycoords='data',
+            xytext=(1, 2.8), textcoords='data',
+            arrowprops=dict(arrowstyle="-",
+                            connectionstyle="bar,angle=180,fraction=-0.2"))
+t = ax.text(
+    2.65, 2.40, "Experiment Number", ha="center", va="center", size=11,
+    bbox=dict(boxstyle="rarrow,pad=0.3", fc="white", ec="k", lw=1))
+bb = t.get_bbox_patch()
+bb.set_boxstyle("round", pad=0.6)
 
 ax.set_ylim([0, 3])
 ax.spines[['right', 'top']].set_visible(False)  
 ax.grid()
-#plt.savefig('Chromocenter_Volume_ACTIN.png', dpi=300, bbox_inches="tight", pad_inches=0.0)
-plt.show()      
+plt.savefig('Chromocenter_Volume_ACTIN.png', dpi=400, bbox_inches="tight", pad_inches=0.2)
+plt.show()    
