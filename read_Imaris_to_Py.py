@@ -10,14 +10,14 @@ import os
 import csv
 
 """
-├── Ctrl
-│   ├── Nuclei├── Volume/Sphericity
-│   └── Chromo└── Count/Volume/
-├── Actin
-│   ├── Nuclei├── Volume/
-│   ├── Chromo├── Count/Volume/
-│   └── Actin └── Area/
-└── Output
+      
+      │──Ctrl─├── Nuclei├── Volume/Sphericity/
+      │       └── Chromo└── Count/Volume/
+Output├
+      │        ├── Nuclei├── Volume//Sphericity/
+      └──Actin─├── Chromo├── Count/Volume/
+               └── Actin └─── Area/
+ 
 """
 
 Imaris_vca = {"File_Name_VCA":[],"VCA_chromo_volume_0":[],"VCA_chromo_volume_1":[],"VCA_chromo_volume_2":[],"VCA_chromo_volume_3":[],
@@ -39,7 +39,7 @@ actin_files =[]
 chromo_files =[]
 nuclei_files = [] 
 def folder_Scan(Type,Time):
-    # Actin after  30min  - value assigned is 3
+    # Actin after  60min  - value assigned is 3
     directory = 'C:/Users/kaabi/Documents/Nuceli_Data/Imaris_to_Py/Output/'
     os.chdir(directory)
     global_path = glob.glob('*/*')
@@ -101,8 +101,8 @@ def read_CSV(fil_Nam):
 def get_Filename(fil_Str):
     File_Name=fil_Str[50:]
     index = File_Name.find('Average') # Find endswith key to locate the image number
-    index = index - 3 
-    File_Name = File_Name[index:index+2]
+    index = index - 3 # -3 if no double no.
+    File_Name = File_Name[index:index+2] #+2 if no double no.
     File_Name = File_Name.split(',') 
     File_Name = File_Name[0] #extracts the first field
     return File_Name
