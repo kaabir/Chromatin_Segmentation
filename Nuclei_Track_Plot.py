@@ -119,25 +119,26 @@ plt.show()
 # =============================================================================
 # Actin Coverage added Mapped with Nuclei Volume ratio to chromocenter volume
 # =============================================================================
-df_actin = pd.read_excel('C:/Users/kaabi/Documents/Nuceli_Data/Imaris_to_Py/Output/Export_VCA_Excel.xlsx')
+df_actin = pd.read_excel('C:/Users/kaabi/Documents/Nuceli_Data/Imaris_to_Py/Output/Export_Actin_Ovr_30_1p2_R2.xlsx')
 
 
 Chromo_volume = pd.DataFrame(df_actin, columns= ['VCA_chromo_volume_0','VCA_chromo_volume_1','VCA_chromo_volume_2'])
 Chromo_volume_np = np.array(Chromo_volume)
+# Normalized chromocenter volume to T0
+Norm_chromoVol_np = np.divide(Chromo_volume_np.T,Chromo_volume_np[:,0]).T #  NP transpose and broadcasting to have matching no. of rows
 
-Nuclei_volume_c = pd.DataFrame(df_actin, columns= ['nuclei_vca_0','nuclei_vca_1','nuclei_vca_2'])
-Nuclei_volume_c_np = np.array(Nuclei_volume_c)
+
+nucleiRatio = pd.DataFrame(df_actin, columns= ['Ratio1','Ratio2'])
+nucleiRatio = np.array(nucleiRatio)
 
 # Ratio of Nuclei Volume Column 2/1 (T0/T60) et 2/0 (T30/T0)
-ratio_2 = np.divide(Nuclei_volume_c_np[:,0],Nuclei_volume_c_np[:,2])
-#ratio_2 = np.insert(ratio_2, 0, 0., axis=0) # Insert zero initally to skip annotation on graph
-ratio_2 =np.round(ratio_2, 2)
-ratio_2 =list(map(str, ratio_2))
-
-ratio_1 = np.divide(Nuclei_volume_c_np[:,0],Nuclei_volume_c_np[:,1])
-#ratio_1 = np.insert(ratio_1, 0, 0., axis=0)
+ratio_1 = nucleiRatio[:,0]
 ratio_1 =np.round(ratio_1, 2)
 ratio_1 =list(map(str, ratio_1))
+
+ratio_2 = nucleiRatio[:,1]
+ratio_2 =np.round(ratio_2, 2)
+ratio_2 =list(map(str, ratio_2))
 
 Coverage_per = pd.DataFrame(df_actin, columns= ['actin_area_60'])
 Coverage_per_np = np.array(Coverage_per)
@@ -156,15 +157,18 @@ ac_Y1_max = np.max(ac_1_Y)
 ac_2_X = range(len(ac_2_Y))
 ac_1_X = range(len(ac_1_Y))
 #ac_1_X = list(map(float, ac_1_X))
-
+# Coordinates can be from normal Chromo Volume or normalized values
 coordinates = [
     dict(
-        y=Chromo_volume_np[i,:], # Comparing rows of timestamps
-        x= np.arange(0, len(Chromo_volume_np[0]),1),legend =FileNum_np[i],
+        y=Norm_chromoVol_np[i,:],
+        #y=Chromo_volume_np[i,:], # Comparing rows of timestamps
+        x= np.arange(0, len(Norm_chromoVol_np[0]),1),legend =FileNum_np[i],
+        #x= np.arange(0, len(Chromo_volume_np[0]),1),legend =FileNum_np[i],
         act_Cov=Coverage_per_np[i] )
         #x=len(Chromo_volume_np[0])
         
-    for i in range(len(Chromo_volume_np))
+    for i in range(len(Norm_chromoVol_np))
+    #for i in range(len(Chromo_volume_np))
 ]
 
 fig, ax = plt.subplots(figsize=(6, 6))
@@ -173,26 +177,28 @@ for c in coordinates:
     ax.plot(c['x'], c['y'],marker="o", alpha=0.9, linestyle='dashed',linewidth=0.65, label=c['legend'])
 
     ax.set_title('Chromocenter Volume (VCA)')
-    categories = ['Actin 0','Actin 30', 'Actin 60']
+    categories = [r'$Actin\ 0$',r'$Actin\ 30$', r'$Actin\ 60$']
     ax.set_xticks(range(len(categories)), categories)
-    ax.set_ylabel('Volume ' r'($\mu m^{3}$)')
-    ax.set_xlabel('Actin time (mins)')
+    ax.set_ylabel(r'$Normalized\ Volume\ (\mu m^{3})$')
+    ax.set_xlabel(r'$Actin\ time\ (mins)$')
     #ax.annotate(c['A2'], xy=(0.5, 0.5), xycoords=ax.transAxes)
     
     
     plt.gca().spines['top'].set_visible(False)
     plt.gca().spines['right'].set_visible(False)
     plt.legend()
+    # File Name Placement
     ax.legend(loc='center left', bbox_to_anchor=(1.10, 0.5),title="File:",fancybox=True,shadow=True )
-    
+    # Acitn coverage placement
     patches = [ plt.plot([],[], marker='o', ms=2, ls="",c='k', mec=None, 
             label="{:.2f}".format(float(Coverage_per_np[i])) )[0]  for i in range(len(Coverage_per_np)) ]    
 
     
-    ax2.legend(handles=patches,loc='center left', bbox_to_anchor=(1.35, 0.5),title="Actin (%)",fancybox=True,shadow=True)
+    ax2.legend(handles=patches,loc='center left', bbox_to_anchor=(1.33, 0.5),title="Actin (%)",fancybox=True,shadow=True)
     ax2.axes.get_yaxis().set_visible(False)
     
-ratio_Cords = np.arange(2,0.1,-0.125) 
+ # To align file name with the correct ratio   
+ratio_Cords = np.arange(6,0.1,-0.4) 
 for i in range(len(ac_2_Y)):
     #print(ratio_1[i])
     #ax.annotate(ratio_1[i], xy=(1.05, ac_1_Y[i]), textcoords='offset pixels')
@@ -222,7 +228,7 @@ bb.set_boxstyle("round", pad=0.6)
 #ax.set_ylim([0, 2.8])
 ax.spines[['right', 'top']].set_visible(False)  
 ax.grid()
-plt.savefig('Chromocenter_Volume_ACTIN.png', dpi=400, bbox_inches="tight", pad_inches=0.2)
+#plt.savefig('Chromocenter_Volume_ACTIN.png', dpi=400, bbox_inches="tight", pad_inches=0.2)
 plt.show()    
 
 # =============================================================================
@@ -230,7 +236,7 @@ plt.show()
 #
 # Chromocenter Volume Implementation
 # =============================================================================
-df_Ctrl = pd.read_excel('C:/Users/kaabi/Documents/Nuceli_Data/Imaris_to_Py/Output/Export_Ctrl_Excel.xlsx',index_col=None)
+df_Ctrl = pd.read_excel('C:/Users/kaabi/Documents/Nuceli_Data/Imaris_to_Py/Output/Export_Ctrl_L_R2.xlsx',index_col=None)
 
 Chromo_volume = pd.DataFrame(df_Ctrl, columns= ['Ctrl_chromo_volume_0','Ctrl_chromo_volume_1','Ctrl_chromo_volume_2'])
 Chromo_volume_np = np.array(Chromo_volume)
@@ -310,11 +316,11 @@ fig, ax = plt.subplots(figsize=(6, 4))
 for c in coordinates:
     ax.plot(c['x'], c['y'],marker="o", alpha=0.9, linestyle='dashed',linewidth=0.65)
     #ax.plot(x, y, marker="o", color='#960056', alpha=0.8, linestyle='dashed', label='Nuclei') 
-    ax.set_title('Nulcei Volume (Ctrl)')
-    categories = ['Actin 0','Actin 30', 'Actin 60']
+    ax.set_title('$Nulcei\ Volume\ (Ctrl)$')
+    categories = [r'$Actin\ 0$',r'$Actin\ 30$', r'$Actin\ 60$']
     ax.set_xticks(range(len(categories)), categories)
-    ax.set_ylabel('$Volume$ ' r'$\mu m^{3}$')
-    ax.set_xlabel('Actin time (mins)')
+    ax.set_ylabel(r'$Volume\ (\mu m^{3})$')
+    ax.set_xlabel(r'$Actin\ time\ (mins)$')
 
     plt.gca().spines['top'].set_visible(False)
     plt.gca().spines['right'].set_visible(False)
@@ -335,20 +341,24 @@ plt.show()
 
 Chromo_volume_ct = pd.DataFrame(df_Ctrl, columns= ['Ctrl_chromo_volume_0','Ctrl_chromo_volume_1','Ctrl_chromo_volume_2'])
 Chromo_volume_np_ct = np.array(Chromo_volume_ct)
+# Normalized chromocenter volume to T0
+Norm_chromoVol_np_c = np.divide(Chromo_volume_np.T,Chromo_volume_np[:,0]).T #  NP transpose and broadcasting to have matching no. of rows
+
 
 Nuclei_volume_ct = pd.DataFrame(df_Ctrl, columns= ['nuclei_ctrl_0','nuclei_ctrl_1','nuclei_ctrl_2'])
 Nuclei_volume_np_ct = np.array(Nuclei_volume_ct)
 
-# Ratio of Nuclei Volume Column 2/1 (T0/T30) et 2/0 (T0/T60)
-ratio_2_ct = np.divide(Nuclei_volume_np_ct[:,0],Nuclei_volume_np_ct[:,2])
-#ratio_2 = np.insert(ratio_2, 0, 0., axis=0) # Insert zero initally to skip annotation on graph
-ratio_2_ct =np.round(ratio_2_ct, 2)
-ratio_2_ct =list(map(str, ratio_2_ct))
+nucleiRatio_ct = pd.DataFrame(df_Ctrl, columns= ['Ratio1','Ratio2'])
+nucleiRatio_ct = np.array(nucleiRatio_ct)
 
-ratio_1_ct = np.divide(Nuclei_volume_np_ct[:,0],Nuclei_volume_np_ct[:,1])
-#ratio_1 = np.insert(ratio_1, 0, 0., axis=0)
+# Ratio of Nuclei Volume Column 2/1 (T0/T60) et 2/0 (T30/T0)
+ratio_1_ct = nucleiRatio_ct[:,0]
 ratio_1_ct =np.round(ratio_1_ct, 2)
 ratio_1_ct =list(map(str, ratio_1_ct))
+
+ratio_2_ct = nucleiRatio_ct[:,1]
+ratio_2_ct =np.round(ratio_2_ct, 2)
+ratio_2_ct =list(map(str, ratio_2_ct))
 
 
 FileNum_ct = pd.DataFrame(df_Ctrl, columns= ['File_Name_Ctrl'])
@@ -370,7 +380,7 @@ ac_Y1_max = np.max(ac_1_Y_ct)
 
 coordinates = [
     dict(
-        y=Chromo_volume_np_ct[i,:], # Comparing rows of timestamps
+        y=Norm_chromoVol_np_c[i,:], # Comparing rows of timestamps
         x= np.arange(0, len(Chromo_volume_np_ct[0]),1),legend =FileNum_np_ct[i],
          )
         
