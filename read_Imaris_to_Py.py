@@ -61,26 +61,15 @@ def folder_Scan(Type,Time):
                         actin_files.append(f_name)
                         #return actin_files
                     else:
-                        print('Some random file or folders in the directory')
-                        
-                        
+                        print('Some random file or folders in the directory')                   
+# ==============
+# Get Actin Coverage
 def actin_Coverage(Nuc_Area,Actin_Area):
-           # Pd to np et divide
-    Nuclei_area_den = list(map(float, Nuc_Area))
-    Act_area_to_Flt = list(map(float, Actin_Area))
-    value = 2
-    Area_Div = [x / value for x in Act_area_to_Flt] 
-    # Actin coverage in perentage       
-    Actin_area_num = []
-    for i in Area_Div :
-        Actin_area_num.append(i * 100)
-    #Actin_coverage_per = []
-    # get last index for the lists for iteration
-    end_index = len(Actin_area_num)
-    for i in range(end_index):
-        Actin_coverage_per = (Actin_area_num[i]/Nuclei_area_den[i])
+    df = pd.DataFrame({"Nuc_Ar": Nuc_Area, "Act_Ar": Actin_Area})
+    act_Div = 2
+    df['Percentage'] = (df['Act_Ar'] / act_Div*df['Nuc_Ar'])*100
+    Actin_coverage_per = df['Percentage'].values.tolist()
     return Actin_coverage_per
-    #Actin_coverage_per.clear()
 # ==============
 # Reading CSV
 def read_CSV(fil_Nam):
