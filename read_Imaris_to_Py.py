@@ -8,6 +8,7 @@ import pandas as pd
 import glob
 import os
 import csv
+import time
 
 """ 
 Output
@@ -58,13 +59,10 @@ def folder_Scan(Type,Time):
                     #print(f_name)
                     if f_name.startswith('(Chromo)'):
                         chromo_files.append(f_name)
-                       # return chromo_files
                     elif f_name.startswith('(NUC04)'):
                         nuclei_files.append(f_name)
-                        #return nuclei_files
                     elif f_name.startswith('(Actin)'):
                         actin_files.append(f_name)
-                        #return actin_files
                     else:
                         print('Some random file or folders in the directory')                   
 # ==============
@@ -72,7 +70,7 @@ def folder_Scan(Type,Time):
 def actin_Coverage(Nuc_Area,Actin_Area):
     df = pd.DataFrame({"Nuc_Ar": Nuc_Area, "Act_Ar": Actin_Area})
     act_Div = 2
-    df['Percentage'] = (df['Act_Ar'] / act_Div*df['Nuc_Ar'])*100
+    df['Percentage'] = (df['Act_Ar'] / act_Div * df['Nuc_Ar']) * 100
     Actin_coverage_per = df['Percentage'].values.tolist()
     return Actin_coverage_per
 # ==============
@@ -99,11 +97,18 @@ def get_Filename(fil_Str):
     File_Name = File_Name[index:index+2] #+2 if no double no. #File_Name = File_Name.split(',') #File_Name = File_Name[0] #extracts the first field
     return File_Name
 
+def timer(func):
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        print("Executed in: " + str(end_time - start_time))
+        return result
+    return wrapper
 # ===============
 # Actin Channel
 # ===============
 #### T0
-##
 actin_files0 = folder_Scan('Actin','T0') # Scan
 for chromoread in chromo_files:
     AC_Chromoread_TO = read_CSV(chromoread)
@@ -154,7 +159,6 @@ for actinread in actin_files:
     Imaris_vca["actin_area_30"].append(actin_Coverage(Nuclei_area_T30,Actin_area_T30))
 actin_files.clear() 
 
-
 #### T60  
 actin_files60 = folder_Scan('Actin','T60')  # Scan
 for chromoread in chromo_files:
@@ -177,7 +181,6 @@ for actinread in actin_files:
     AC_actin_T6O = read_CSV(actinread)
     Actin_area_T60.append(AC_actin_T6O.loc['Area','Sum'])
     Imaris_vca["actin_area_60"].append(actin_Coverage(Nuclei_area_T60,Actin_area_T60))
-
 actin_files.clear()  
 # ================
 # Control Channel
@@ -222,7 +225,9 @@ for chromoread in chromo_files:
     CT_Chromoread_T6O = read_CSV(chromoread)
     Imaris_ctrl["Ctrl_chromo_volume_2"].append(CT_Chromoread_T6O.loc['Volume','Sum'])
     Imaris_ctrl["Ctrl_chromo_count_2"].append(CT_Chromoread_T6O.loc['Volume','Count'])
-chromo_files.clear()     
+chromo_files.clear()   
+
+@timer
 # Nuclei Read
 for nucleiread in nuclei_files:
     CT_nuclei_T6O = read_CSV(nucleiread)
