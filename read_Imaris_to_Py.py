@@ -9,22 +9,27 @@ import glob
 import os
 import csv
 
-"""
-      
-      │──Ctrl─├── Nuclei├── Volume/Sphericity/
-      │       └── Chromo└── Count/Volume/
-Output├
-      │        ├── Nuclei├── Volume//Sphericity/
-      └──Actin─├── Chromo├── Count/Volume/
-               └── Actin └─── Area/
- 
+""" 
+Output
+├── Ctrl
+│   ├── T0
+│   │   ├── Nuclei├── Volume/Sphericity/
+│   │   └── Chromo└── Count/Volume/
+│   ├── T15...
+│   └── T30...
+└── Actin
+    ├── T0
+    │   ├── Nuclei├── Volume/Sphericity/
+    │   ├── Chromo├── Count/Volume/
+    │   └── Actin └── Area/
+    ├── T15...
+    └── T30...
 """
 
 Imaris_vca = {"File_Name_VCA":[],"VCA_chromo_volume_0":[],"VCA_chromo_volume_1":[],"VCA_chromo_volume_2":[],"VCA_chromo_volume_3":[],
            "VCA_chromo_count_0":[],"VCA_chromo_count_1":[],"VCA_chromo_count_2":[],"VCA_chromo_count_3":[],
           "nuclei_vca_0":[],"nuclei_vca_1":[],"nuclei_vca_2":[],"nuclei_vca_3":[],
            "actin_area_30":[],"actin_area_60":[],"sphericity_vca_0":[],"sphericity_vca_1":[],"sphericity_vca_2":[],"sphericity_vca_3":[]}
-
 
 Imaris_ctrl = {"File_Name_Ctrl":[],"Ctrl_chromo_volume_0":[],"Ctrl_chromo_volume_1":[],"Ctrl_chromo_volume_2":[],"Ctrl_chromo_volume_3":[],
            "Ctrl_chromo_count_0":[],"Ctrl_chromo_count_1":[],"Ctrl_chromo_count_2":[],"Ctrl_chromo_count_3":[],
@@ -91,9 +96,7 @@ def get_Filename(fil_Str):
     File_Name=fil_Str[50:]
     index = File_Name.find('Average') # Find endswith key to locate the image number
     index = index - 3 # -3 if no double no.
-    File_Name = File_Name[index:index+2] #+2 if no double no.
-    File_Name = File_Name.split(',') 
-    File_Name = File_Name[0] #extracts the first field
+    File_Name = File_Name[index:index+2] #+2 if no double no. #File_Name = File_Name.split(',') #File_Name = File_Name[0] #extracts the first field
     return File_Name
 
 # ===============
