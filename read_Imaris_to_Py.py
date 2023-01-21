@@ -67,7 +67,7 @@ def folder_Scan(Type,Time):
                     else:
                         print('Some random file or folders in the directory')
                         
-# =============================================================================                      
+# Compute Actin coverage                   
 def actin_Coverage(Nuc_Area,Actin_Area):
     # Get Percentage Cover
     Nuclei_area_den = list(map(float, Nuc_Area))
@@ -76,37 +76,30 @@ def actin_Coverage(Nuc_Area,Actin_Area):
     Area_Div = [x / value for x in Act_area_to_Flt]      
     Actin_area_num = []
     for i in Area_Div :
-        Actin_area_num.append(i * 100)
-    # get last index for the lists for iteration
-    end_index = len(Actin_area_num)
-    for i in range(end_index):
+        Actin_area_num.append(i * 100)  
+    for i in range(len(Actin_area_num)):
         Actin_coverage_per = (Actin_area_num[i]/Nuclei_area_den[i])
     return Actin_coverage_per
-    #Actin_coverage_per.clear()
-# =============================================================================
+
+
 # Reading CSV
 def read_CSV(fil_Nam):
-     filename_delimiter = ','
-     largest_column_count = 0
      with open(fil_Nam) as temp_fil:
-         #col_count = list(map(len(l.split(",")), temp_f.readlines())) # where do I get index
          col_count = [ len(l.split(",")) for l in temp_fil.readlines() ]
          column_names = [j for j in range(0, max(col_count))]
          df = pd.DataFrame()
          df = pd.read_csv(fil_Nam, delimiter=",", names=column_names)
          df.columns = df.iloc[2]
-         df = df[3:]
          df = df.set_index(df.columns[0])
+         df = df[3:]   
      return df
      df.clear()
-# =============================================================================
+# Add Filename
 def get_Filename(fil_Str):
     File_Name=fil_Str[50:]
     index = File_Name.find('Average') # Find endswith key to locate the image number
     index = index - 6 # -3 if no double no.
     File_Name = File_Name[index:index+5] #+2 if no double no.
-    File_Name = File_Name.split(',') 
-    File_Name = File_Name[0] #extracts the first field
     return File_Name
 
 # ===============
