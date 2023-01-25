@@ -288,3 +288,49 @@ Actin_O_30_O_R2 = Actin_O_30[Actin_O_30['Ratio2'] > 1.2]
 pd.DataFrame(Actin_O_30_O_R2).to_excel('C:/Users/kaabi/Documents/Nuceli_Data/Imaris_to_Py/Output/Export_Actin_Ovr_30_SHR_1p2_R2.xlsx')
 Actin_O_30_L_R2 = Actin_O_30[Actin_O_30['Ratio2'] < 1.2]
 pd.DataFrame(Actin_O_30_L_R2).to_excel('C:/Users/kaabi/Documents/Nuceli_Data/Imaris_to_Py/Output/Export_Actin_Ovr_30_Less_noShrink_1p2_R2.xlsx')
+
+
+# ===============
+# Add tracking for mismatching values
+# ===============
+#### T0
+actin_files0 = folder_Scan('Actin','T0') # Scan
+print(len(chromo_files))
+FileNameT0 = []
+for chromoread in chromo_files:
+    FileNameT0.append(chromoread)
+    AC_Chromoread_TO = read_CSV(chromoread)
+    #exec(f'AC_Chromoread_TO = read_CSV(chromoread)') 
+    #Imaris_vca["File_Name_VCA"].append(get_Filename(chromoread))
+    Imaris_vca["VCA_chromo_volume_0"].append(AC_Chromoread_TO.loc['Volume','Sum'])
+    Imaris_vca["VCA_chromo_count_0"].append(AC_Chromoread_TO.loc['Volume','Count'])
+chromo_files.clear()    
+#### T30 
+
+actin_files30 = folder_Scan('Actin','T30')  # Scan
+FileNameT1 = []
+print(len(chromo_files))
+for chromoread in chromo_files:  
+    FileNameT1.append(chromoread)
+    #Imaris_vca["File_Name_VCA"].append(File_Name)
+chromo_files.clear() 
+#### T60  
+# Adds files of T0 and T30 and replaces it with none in case no file
+FileTrack1 = []
+for element in FileNameT0:
+    if element in FileNameT1:
+        FileTrack1.append(element)
+    else:
+        FileTrack1.append(None)
+        
+for chromoread in FileTrack1:  
+    if not (chromoread is None):
+        AC_Chromoread_T3O = read_CSV(chromoread)
+        Imaris_vca["VCA_chromo_volume_1"].append(AC_Chromoread_T3O.loc['Volume','Sum'])
+        Imaris_vca["VCA_chromo_count_1"].append(AC_Chromoread_T3O.loc['Volume','Count'])
+        print('A')
+    else:
+        print('B')
+        Imaris_vca["VCA_chromo_volume_1"].append(None)
+        Imaris_vca["VCA_chromo_count_1"].append(None)
+chromo_files.clear() 
