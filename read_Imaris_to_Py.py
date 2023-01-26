@@ -67,7 +67,7 @@ def folder_Scan(Type,Time):
                     else:
                         print('Some random file or folders in the directory')
                         
-# Compute Actin coverage                   
+# =============================================================================                      
 def actin_Coverage(Nuc_Area,Actin_Area):
     # Get Percentage Cover
     Nuclei_area_den = list(map(float, Nuc_Area))
@@ -76,162 +76,373 @@ def actin_Coverage(Nuc_Area,Actin_Area):
     Area_Div = [x / value for x in Act_area_to_Flt]      
     Actin_area_num = []
     for i in Area_Div :
-        Actin_area_num.append(i * 100)  
-    for i in range(len(Actin_area_num)):
+        Actin_area_num.append(i * 100)
+    # get last index for the lists for iteration
+    end_index = len(Actin_area_num)
+    for i in range(end_index):
         Actin_coverage_per = (Actin_area_num[i]/Nuclei_area_den[i])
     return Actin_coverage_per
-
-
+    #Actin_coverage_per.clear()
+# =============================================================================
 # Reading CSV
 def read_CSV(fil_Nam):
+     filename_delimiter = ','
+     largest_column_count = 0
      with open(fil_Nam) as temp_fil:
+         #col_count = list(map(len(l.split(",")), temp_f.readlines())) # where do I get index
          col_count = [ len(l.split(",")) for l in temp_fil.readlines() ]
          column_names = [j for j in range(0, max(col_count))]
          df = pd.DataFrame()
          df = pd.read_csv(fil_Nam, delimiter=",", names=column_names)
          df.columns = df.iloc[2]
+         df = df[3:]
          df = df.set_index(df.columns[0])
-         df = df[3:]   
      return df
      df.clear()
-# Add Filename
+# =============================================================================
 def get_Filename(fil_Str):
     File_Name=fil_Str[50:]
     index = File_Name.find('Average') # Find endswith key to locate the image number
     index = index - 6 # -3 if no double no.
     File_Name = File_Name[index:index+5] #+2 if no double no.
+    File_Name = File_Name.split(',') 
+    File_Name = File_Name[0] #extracts the first field
     return File_Name
 
 # ===============
 # Actin Channel
 # ===============
 #### T0
-##
 actin_files0 = folder_Scan('Actin','T0') # Scan
+ChromoNameT0 = []
 for chromoread in chromo_files:
-    AC_Chromoread_T0 = read_CSV(chromoread)
-    #exec(f'AC_Chromoread_T0 = read_CSV(chromoread)') 
+    ChromoNameT0.append(chromoread)
+    AC_Chromoread_TO = read_CSV(chromoread)
     Imaris_vca["File_Name_VCA"].append(get_Filename(chromoread))
-    Imaris_vca["VCA_chromo_volume_0"].append(AC_Chromoread_T0.loc['Volume','Sum'])
-    Imaris_vca["VCA_chromo_count_0"].append(AC_Chromoread_T0.loc['Volume','Count'])
-chromo_files.clear()     
-# Nuclei Read
-Nuclei_area_T0 = []
-for nucleiread in nuclei_files:
-    AC_nuclei_T0 = read_CSV(nucleiread)
-    Imaris_vca["nuclei_vca_0"].append(AC_nuclei_T0.loc['Volume','Sum'])
-    Nuclei_area_T0.append(AC_nuclei_T0.loc['Volume','Sum'])
-    Imaris_vca["sphericity_vca_0"].append(AC_nuclei_T0.loc['Sphericity','Mean']) 
-nuclei_files.clear()  
-
-# ACtin Read
-Actin_area_T0 = []  #No area at T0
-for actinread in actin_files:
-    AC_actin_T0 = read_CSV(actinread)
-    Actin_area_T0.append(AC_actin_T0.loc['Area','Sum'])
-actin_files.clear()    
-
-#### T30
-##
-actin_files30 = folder_Scan('Actin','T30')  # Scan
-for chromoread in chromo_files:
-    AC_Chromoread_T30 = read_CSV(chromoread)
-    #Imaris_vca["File_Name_VCA"].append(File_Name)
-    Imaris_vca["VCA_chromo_volume_1"].append(AC_Chromoread_T30.loc['Volume','Sum'])
-    Imaris_vca["VCA_chromo_count_1"].append(AC_Chromoread_T30.loc['Volume','Count'])
+    Imaris_vca["VCA_chromo_volume_0"].append(AC_Chromoread_TO.loc['Volume','Sum'])
+    Imaris_vca["VCA_chromo_count_0"].append(AC_Chromoread_TO.loc['Volume','Count'])
 chromo_files.clear() 
 
-Nuclei_area_T30 = []
+# Nuclei Read
+Nuclei_area_T0 = []
+NucleiNameT0 = []  
 for nucleiread in nuclei_files:
-    AC_nuclei_T30 = read_CSV(nucleiread)
-    Imaris_vca["nuclei_vca_1"].append(AC_nuclei_T30.loc['Volume','Sum'])
-    Nuclei_area_T30.append(AC_nuclei_T30.loc['Volume','Sum'])
-    Imaris_vca["sphericity_vca_1"].append(AC_nuclei_T30.loc['Sphericity','Mean']) 
+    NucleiNameT0.append(nucleiread)
+    AC_nuclei_TO = read_CSV(nucleiread)
+    Imaris_vca["nuclei_vca_0"].append(AC_nuclei_TO.loc['Volume','Sum'])
+    Nuclei_area_T0.append(AC_nuclei_TO.loc['Area','Sum'])
+    Imaris_vca["sphericity_vca_0"].append(AC_nuclei_TO.loc['Sphericity','Mean']) 
+
+# Actin Read
+Actin_area_T0 = []  #No area at T0
+for actinread in actin_files:
+    AC_actin_TO = read_CSV(actinread)
+    Actin_area_T0.append(AC_actin_TO.loc['Area','Sum'])
+# Save original filname to compare for next time frame    
+ActiniNameT0 = []    
+# Taking reference from Nuclei for Actin (No actin at T0)
+for actinread in NucleiNameT0:    
+    _ = actinread.replace("(NUC04)", "(Actin)",2)
+    ActiniNameT0.append(_)
+    
+nuclei_files.clear()    
+actin_files.clear()  
+
+#### T30 ####
+
+actin_files30 = folder_Scan('Actin','T30')  # Scan
+
+# Chromocenter Read
+ChromoNameT1 = []
+for chromoread in chromo_files:  
+    ChromoNameT1.append(chromoread)
+
+# Adds files of T0 and T30 and replaces it with none in case no file
+ChromoTrack1 = []
+for element in ChromoNameT0:
+    if element in ChromoNameT1:
+        ChromoTrack1.append(element)
+    else:
+        ChromoTrack1.append(None)
+
+for chromoread in ChromoTrack1:  
+    if not (chromoread is None):
+        AC_Chromoread_T30 = read_CSV(chromoread)
+        Imaris_vca["VCA_chromo_volume_1"].append(AC_Chromoread_T30.loc['Volume','Sum'])
+        Imaris_vca["VCA_chromo_count_1"].append(AC_Chromoread_T30.loc['Volume','Count'])
+    else:
+        Imaris_vca["VCA_chromo_volume_1"].append(None)
+        Imaris_vca["VCA_chromo_count_1"].append(None)
+chromo_files.clear() 
+
+# Nuclei Read
+NucleiNameT1 = []
+for nucleiread in nuclei_files:  
+    NucleiNameT1.append(nucleiread)
+
+# Adds files of T0 and T30 and replaces it with none in case no file
+NucleiTrack1 = []
+for element in NucleiNameT0:
+    if element in NucleiNameT1:
+        NucleiTrack1.append(element)
+    else:
+        NucleiTrack1.append(None)
+		
+Nuclei_area_T30 = []
+for nucleiread in NucleiTrack1:  
+    if not (nucleiread is None):
+        AC_nuclei_T30 = read_CSV(nucleiread)
+        Imaris_vca["nuclei_vca_1"].append(AC_nuclei_T30.loc['Volume','Sum'])
+        Imaris_vca["sphericity_vca_1"].append(AC_nuclei_T30.loc['Sphericity','Mean'])
+        Nuclei_area_T30.append(AC_nuclei_T30.loc['Area','Sum'])
+    else:
+        Imaris_vca["nuclei_vca_1"].append(None)
+        Imaris_vca["sphericity_vca_1"].append(None)
+        Nuclei_area_T30.append(None)
 nuclei_files.clear()  
 
 # Actin Read
-Actin_area_T30 = []  
-for actinread in actin_files:
-    AC_actin_T30 = read_CSV(actinread)
-    Actin_area_T30.append(AC_actin_T30.loc['Area','Sum'])
-    Imaris_vca["actin_area_30"].append(actin_Coverage(Nuclei_area_T30,Actin_area_T30))
+# Save original filname to compare for next time frame    
+ActiniNameT1 = []    
+# Taking reference from Nuclei for Actin (No actin at T0)
+for actinread in NucleiNameT1:    
+    _ = actinread.replace("(NUC04)", "(Actin)",2)
+    ActiniNameT1.append(_)
+# Actin Read
+
+ActinTrack1 = []
+for element in ActiniNameT0:
+    if element in ActiniNameT1:
+        ActinTrack1.append(element)
+    else:
+        ActinTrack1.append(None)
+		
+Actin_area_T30 = [] 
+for actinread in ActinTrack1:  
+    if not (actinread is None):
+        AC_nuclei_T30 = read_CSV(actinread)
+        Actin_area_T30.append(AC_nuclei_T30.loc['Area','Sum'])
+        Imaris_vca["actin_area_30"].append(actin_Coverage(Nuclei_area_T30,Actin_area_T30))
+    else:
+        Imaris_vca["actin_area_30"].append(None)
 actin_files.clear() 
 
+#### T60 ####
 
-#### T60  
 actin_files60 = folder_Scan('Actin','T60')  # Scan
-for chromoread in chromo_files:
-    AC_Chromoread_T60 = read_CSV(chromoread)
-    #Imaris_vca["File_Name_VCA"].append(File_Name)
-    Imaris_vca["VCA_chromo_volume_2"].append(AC_Chromoread_T60.loc['Volume','Sum'])
-    Imaris_vca["VCA_chromo_count_2"].append(AC_Chromoread_T60.loc['Volume','Count'])    
+
+# Chromocenter Read
+ChromoNameT2 = []
+for chromoread in chromo_files:  
+    ChromoNameT2.append(chromoread)
+
+# Adds files of T0 and T6 and replaces it with none in case no file
+ChromoTrack2 = []
+for element in ChromoNameT0:
+    if element in ChromoNameT2:
+        ChromoTrack2.append(element)
+    else:
+        ChromoTrack2.append(None)
+
+for chromoread in ChromoTrack2:  
+    if not (chromoread is None):
+        AC_Chromoread_T60 = read_CSV(chromoread)
+        Imaris_vca["VCA_chromo_volume_2"].append(AC_Chromoread_T60.loc['Volume','Sum'])
+        Imaris_vca["VCA_chromo_count_2"].append(AC_Chromoread_T60.loc['Volume','Count'])
+    else:
+        Imaris_vca["VCA_chromo_volume_2"].append(None)
+        Imaris_vca["VCA_chromo_count_2"].append(None)
 chromo_files.clear() 
 
+# Nuclei Read
+NucleiNameT2 = []
+for nucleiread in nuclei_files:  
+    NucleiNameT2.append(nucleiread)
+
+# Adds files of T0 and T30 and replaces it with none in case no file
+NucleiTrack2 = []
+for element in NucleiNameT0:
+    if element in NucleiNameT2:
+        NucleiTrack2.append(element)
+    else:
+        NucleiTrack2.append(None)
+		
 Nuclei_area_T60 = []
-for nucleiread in nuclei_files:
-    AC_nuclei_T60 = read_CSV(nucleiread)
-    Imaris_vca["nuclei_vca_2"].append(AC_nuclei_T60.loc['Volume','Sum'])
-    Nuclei_area_T60.append(AC_nuclei_T60.loc['Volume','Sum'])
-    Imaris_vca["sphericity_vca_2"].append(AC_nuclei_T60.loc['Sphericity','Mean'])    
+for nucleiread in NucleiTrack2:  
+    if not (nucleiread is None):
+        AC_nuclei_T60 = read_CSV(nucleiread)
+        Imaris_vca["nuclei_vca_2"].append(AC_nuclei_T60.loc['Volume','Sum'])
+        Imaris_vca["sphericity_vca_2"].append(AC_nuclei_T60.loc['Sphericity','Mean'])
+        Nuclei_area_T60.append(AC_nuclei_T60.loc['Area','Sum'])
+    else:
+        Imaris_vca["nuclei_vca_2"].append(None)
+        Imaris_vca["sphericity_vca_2"].append(None)
+        Nuclei_area_T60.append(None)
 nuclei_files.clear()  
-# ACtin Read
-Actin_area_T60 = []  #No area at T0
-for actinread in actin_files:
-    AC_actin_T60 = read_CSV(actinread)
-    Actin_area_T60.append(AC_actin_T60.loc['Area','Sum'])
-    Imaris_vca["actin_area_60"].append(actin_Coverage(Nuclei_area_T60,Actin_area_T60))
 
-actin_files.clear()  
-# ================
+# Actin Read
+# Save original filname to compare for next time frame    
+ActiniNameT2 = []    
+# Taking reference from Nuclei for Actin (No actin at T0)
+for actinread in NucleiNameT1:    
+    _ = actinread.replace("(NUC04)", "(Actin)",2)
+    ActiniNameT2.append(_)
+# Actin Read
+
+ActinTrack2 = []
+for element in ActiniNameT0:
+    if element in ActiniNameT2:
+        ActinTrack2.append(element)
+    else:
+        ActinTrack2.append(None)
+		
+Actin_area_T60 = [] 
+for actinread in ActinTrack1:  
+    if not (actinread is None):
+        AC_nuclei_T60 = read_CSV(actinread)
+        Actin_area_T60.append(AC_nuclei_T60.loc['Area','Sum'])
+        Imaris_vca["actin_area_60"].append(actin_Coverage(Nuclei_area_T60,Actin_area_T60))
+    else:
+        Imaris_vca["actin_area_60"].append(None)
+actin_files.clear() 
+
+ChromoNameT0.clear()
+ChromoNameT1.clear() 
+NucleiNameT0.clear() 
+NucleiNameT2.clear() 
+NucleiNameT1.clear() 
+ChromoTrack1.clear()
+ChromoTrack2.clear()
+
+# ===============
 # Control Channel
-# ================
+# ===============
 #### T0
-##
+
 ctrl_files0 = folder_Scan('Ctrl','T0') # Scan
+
+ChromoNameT0 = []
 for chromoread in chromo_files:
-    CT_Chromoread_T0 = read_CSV(chromoread)
+    ChromoNameT0.append(chromoread)
+    CT_Chromoread_TO = read_CSV(chromoread)
     Imaris_ctrl["File_Name_Ctrl"].append(get_Filename(chromoread))
-    Imaris_ctrl["Ctrl_chromo_volume_0"].append(CT_Chromoread_T0.loc['Volume','Sum'])
-    Imaris_ctrl["Ctrl_chromo_count_0"].append(CT_Chromoread_T0.loc['Volume','Count']) 
-chromo_files.clear()     
+    Imaris_ctrl["Ctrl_chromo_volume_0"].append(CT_Chromoread_TO.loc['Volume','Sum'])
+    Imaris_ctrl["Ctrl_chromo_count_0"].append(CT_Chromoread_TO.loc['Volume','Count']) 
+chromo_files.clear() 
+
+# Nuclei Read
+NucleiNameT0 =[]
+for nucleiread in nuclei_files:
+    NucleiNameT0.append(nucleiread)
+    CT_nuclei_TO = read_CSV(nucleiread)
+    Imaris_ctrl["nuclei_ctrl_0"].append(CT_nuclei_TO.loc['Volume','Sum'])
+    Imaris_ctrl["sphericity_ctrl_0"].append(CT_nuclei_TO.loc['Sphericity','Mean'])
+nuclei_files.clear()    
+
+  
 # Nuclei Read
 for nucleiread in nuclei_files:
-    CT_nuclei_T0 = read_CSV(nucleiread)
-    Imaris_ctrl["nuclei_ctrl_0"].append(CT_nuclei_T0.loc['Volume','Sum'])
-    Nuclei_area_T0.append(CT_nuclei_T0.loc['Volume','Sum'])
-    Imaris_ctrl["sphericity_ctrl_0"].append(CT_nuclei_T0.loc['Sphericity','Mean']) 
+    CT_nuclei_T3O = read_CSV(nucleiread)
+    Imaris_ctrl["nuclei_ctrl_1"].append(CT_nuclei_T3O.loc['Volume','Sum'])
+    Imaris_ctrl["sphericity_ctrl_1"].append(CT_nuclei_T3O.loc['Sphericity','Mean']) 
 nuclei_files.clear()  
 
-#### T30
-##
+#### T30 ####
 ctrl_files30 = folder_Scan('Ctrl','T30') # Scan
-for chromoread in chromo_files:
-    CT_Chromoread_T30 = read_CSV(chromoread)
-    Imaris_ctrl["Ctrl_chromo_volume_1"].append(CT_Chromoread_T30.loc['Volume','Sum'])
-    Imaris_ctrl["Ctrl_chromo_count_1"].append(CT_Chromoread_T30.loc['Volume','Count'])
-chromo_files.clear()     
-# Nuclei Read
-for nucleiread in nuclei_files:
-    CT_nuclei_T30 = read_CSV(nucleiread)
-    Imaris_ctrl["nuclei_ctrl_1"].append(CT_nuclei_T30.loc['Volume','Sum'])
-    Nuclei_area_T30.append(CT_nuclei_T30.loc['Volume','Sum'])
-    Imaris_ctrl["sphericity_ctrl_1"].append(CT_nuclei_T30.loc['Sphericity','Mean']) 
-nuclei_files.clear()  
+# Chromocenter Read
+ChromoNameT1 = []
+for chromoread in chromo_files:  
+    ChromoNameT1.append(chromoread)
 
-#### T60
-##
-ctrl_files60 = folder_Scan('Ctrl','T60') # Scan
-for chromoread in chromo_files:
-    CT_Chromoread_T60 = read_CSV(chromoread)
-    Imaris_ctrl["Ctrl_chromo_volume_2"].append(CT_Chromoread_T60.loc['Volume','Sum'])
-    Imaris_ctrl["Ctrl_chromo_count_2"].append(CT_Chromoread_T60.loc['Volume','Count'])
-chromo_files.clear()     
+# Adds files of T0 and T30 and replaces it with none in case no file
+ChromoTrack1 = []
+for element in ChromoNameT0:
+    if element in ChromoNameT1:
+        ChromoTrack1.append(element)
+    else:
+        ChromoTrack1.append(None)
+
+for chromoread in ChromoTrack1:  
+    if not (chromoread is None):
+        CT_Chromoread_T3O = read_CSV(chromoread)
+        Imaris_ctrl["Ctrl_chromo_volume_1"].append(CT_Chromoread_T3O.loc['Volume','Sum'])
+        Imaris_ctrl["Ctrl_chromo_count_1"].append(CT_Chromoread_T3O.loc['Volume','Count'])
+    else:
+        Imaris_ctrl["Ctrl_chromo_volume_1"].append(None)
+        Imaris_ctrl["Ctrl_chromo_count_1"].append(None)
+chromo_files.clear() 
+
 # Nuclei Read
-for nucleiread in nuclei_files:
-    CT_nuclei_T60 = read_CSV(nucleiread)
-    Imaris_ctrl["nuclei_ctrl_2"].append(CT_nuclei_T60.loc['Volume','Sum'])
-    Nuclei_area_T0.append(CT_nuclei_T60.loc['Volume','Sum'])
-    Imaris_ctrl["sphericity_ctrl_2"].append(CT_nuclei_T60.loc['Sphericity','Mean']) 
+NucleiNameT1 = []
+for nucleiread in nuclei_files:  
+    NucleiNameT1.append(nucleiread)
+
+# Adds files of T0 and T30 and replaces it with none in case no file
+NucleiTrack1 = []
+for element in NucleiNameT0:
+    if element in NucleiNameT1:
+        NucleiTrack1.append(element)
+    else:
+        NucleiTrack1.append(None)
+		
+Nuclei_area_T30 = []
+for nucleiread in NucleiTrack1:  
+    if not (nucleiread is None):
+        CT_nuclei_T3O = read_CSV(nucleiread)
+        Imaris_ctrl["nuclei_ctrl_1"].append(CT_nuclei_T3O.loc['Volume','Sum'])
+        Imaris_ctrl["sphericity_ctrl_1"].append(CT_nuclei_T3O.loc['Sphericity','Mean']) 
+    else:
+        Imaris_ctrl["nuclei_ctrl_1"].append(None)
+        Imaris_ctrl["sphericity_ctrl_1"].append(None)
+        Nuclei_area_T30.append(None)
+nuclei_files.clear()  
+#### T60 #### 
+ctrl_files60 = folder_Scan('Ctrl','T60')  # Scan
+
+# Chromocenter Read
+ChromoNameT2 = []
+for chromoread in chromo_files:  
+    ChromoNameT2.append(chromoread)
+chromo_files.clear() 
+# Adds files of T0 and T6 and replaces it with none in case no file
+ChromoTrack2 = []
+for element in ChromoNameT0:
+    if element in ChromoNameT2:
+        ChromoTrack2.append(element)
+    else:
+        ChromoTrack2.append(None)
+
+for chromoread in ChromoTrack2:  
+    if not (chromoread is None):
+        CT_Chromoread_T6O = read_CSV(chromoread)
+        Imaris_ctrl["Ctrl_chromo_volume_2"].append(CT_Chromoread_T6O.loc['Volume','Sum'])
+        Imaris_ctrl["Ctrl_chromo_count_2"].append(CT_Chromoread_T6O.loc['Volume','Count'])
+    else:
+        Imaris_ctrl["Ctrl_chromo_volume_2"].append(None)
+        Imaris_ctrl["Ctrl_chromo_count_2"].append(None)
+        
+# Nuclei Read
+NucleiNameT2 = []
+for nucleiread in nuclei_files:  
+    NucleiNameT2.append(nucleiread)
+
+# Adds files of T0 and T30 and replaces it with none in case no file
+NucleiTrack2 = []
+for element in NucleiNameT0:
+    if element in NucleiNameT2:
+        NucleiTrack2.append(element)
+    else:
+        NucleiTrack2.append(None)
+		
+Nuclei_area_T60 = []
+for nucleiread in NucleiTrack2:  
+    if not (nucleiread is None):
+        CT_nuclei_T6O = read_CSV(nucleiread)
+        Imaris_ctrl["nuclei_ctrl_2"].append(CT_nuclei_T6O.loc['Volume','Sum'])
+        Imaris_ctrl["sphericity_ctrl_2"].append(CT_nuclei_T6O.loc['Sphericity','Mean'])
+    else:
+        Imaris_ctrl["nuclei_ctrl_2"].append(None)
+        Imaris_ctrl["sphericity_ctrl_2"].append(None)
 nuclei_files.clear()  
 
 # Export Ctrl Data 
@@ -288,49 +499,3 @@ Actin_O_30_O_R2 = Actin_O_30[Actin_O_30['Ratio2'] > 1.2]
 pd.DataFrame(Actin_O_30_O_R2).to_excel('C:/Users/kaabi/Documents/Nuceli_Data/Imaris_to_Py/Output/Export_Actin_Ovr_30_SHR_1p2_R2.xlsx')
 Actin_O_30_L_R2 = Actin_O_30[Actin_O_30['Ratio2'] < 1.2]
 pd.DataFrame(Actin_O_30_L_R2).to_excel('C:/Users/kaabi/Documents/Nuceli_Data/Imaris_to_Py/Output/Export_Actin_Ovr_30_Less_noShrink_1p2_R2.xlsx')
-
-
-# ===============
-# Add tracking for mismatching values
-# ===============
-#### T0
-actin_files0 = folder_Scan('Actin','T0') # Scan
-print(len(chromo_files))
-FileNameT0 = []
-for chromoread in chromo_files:
-    FileNameT0.append(chromoread)
-    AC_Chromoread_TO = read_CSV(chromoread)
-    #exec(f'AC_Chromoread_TO = read_CSV(chromoread)') 
-    #Imaris_vca["File_Name_VCA"].append(get_Filename(chromoread))
-    Imaris_vca["VCA_chromo_volume_0"].append(AC_Chromoread_TO.loc['Volume','Sum'])
-    Imaris_vca["VCA_chromo_count_0"].append(AC_Chromoread_TO.loc['Volume','Count'])
-chromo_files.clear()    
-#### T30 
-
-actin_files30 = folder_Scan('Actin','T30')  # Scan
-FileNameT1 = []
-print(len(chromo_files))
-for chromoread in chromo_files:  
-    FileNameT1.append(chromoread)
-    #Imaris_vca["File_Name_VCA"].append(File_Name)
-chromo_files.clear() 
-#### T60  
-# Adds files of T0 and T30 and replaces it with none in case no file
-FileTrack1 = []
-for element in FileNameT0:
-    if element in FileNameT1:
-        FileTrack1.append(element)
-    else:
-        FileTrack1.append(None)
-        
-for chromoread in FileTrack1:  
-    if not (chromoread is None):
-        AC_Chromoread_T3O = read_CSV(chromoread)
-        Imaris_vca["VCA_chromo_volume_1"].append(AC_Chromoread_T3O.loc['Volume','Sum'])
-        Imaris_vca["VCA_chromo_count_1"].append(AC_Chromoread_T3O.loc['Volume','Count'])
-        print('A')
-    else:
-        print('B')
-        Imaris_vca["VCA_chromo_volume_1"].append(None)
-        Imaris_vca["VCA_chromo_count_1"].append(None)
-chromo_files.clear() 
