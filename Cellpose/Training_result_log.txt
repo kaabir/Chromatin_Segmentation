@@ -1,0 +1,35 @@
+2023-02-27 12:32:57,287 [WARNING] 1 train images with number of masks less than min_train_masks (1), removing from train set
+2023-02-27 12:33:02,335 [INFO] >>>> median diameter set to = 30
+2023-02-27 12:33:02,336 [INFO] >>>> mean of training label mask diameters (saved to model) 180.835
+2023-02-27 12:33:02,337 [INFO] >>>> training network with 2 channel input <<<<
+2023-02-27 12:33:02,338 [INFO] >>>> LR: 0.10000, batch_size: 8, weight_decay: 0.00010
+2023-02-27 12:33:02,339 [INFO] >>>> ntrain = 438
+2023-02-27 12:33:02,340 [INFO] >>>> nimg_per_epoch = 438
+2023-02-27 12:38:12,313 [INFO] Epoch 0, Time 310.0s, Loss 1.9940, LR 0.0000
+2023-02-27 12:43:22,324 [INFO] saving network parameters to C:/Users/kaabi/Documents/Nuceli_Data/Enucleation/Cellpose/Sorted/Done\models/CP_20230227_122536
+2023-02-27 13:04:15,613 [INFO] Epoch 5, Time 1873.3s, Loss 0.0917, LR 0.0556
+2023-02-27 13:30:05,670 [INFO] Epoch 10, Time 3423.3s, Loss 0.0389, LR 0.1000
+2023-02-27 14:21:49,836 [INFO] Epoch 20, Time 6527.5s, Loss 0.0289, LR 0.1000
+2023-02-27 15:13:59,122 [INFO] Epoch 30, Time 9656.8s, Loss 0.0253, LR 0.1000
+2023-02-27 16:24:33,298 [INFO] Epoch 40, Time 13891.0s, Loss 0.0234, LR 0.1000
+2023-02-27 17:17:05,471 [INFO] Epoch 50, Time 17043.1s, Loss 0.0221, LR 0.1000
+2023-02-27 18:17:16,991 [INFO] Epoch 60, Time 20654.7s, Loss 0.0212, LR 0.1000
+2023-02-27 19:09:34,650 [INFO] Epoch 70, Time 23792.3s, Loss 0.0206, LR 0.1000
+2023-02-27 20:01:10,984 [INFO] Epoch 80, Time 26888.6s, Loss 0.0209, LR 0.1000
+2023-02-27 20:52:43,911 [INFO] Epoch 90, Time 29981.6s, Loss 0.0201, LR 0.1000
+2023-02-27 21:44:18,850 [INFO] Epoch 100, Time 33076.5s, Loss 0.0199, LR 0.1000
+2023-02-27 21:49:28,633 [INFO] saving network parameters to C:/Users/kaabi/Documents/Nuceli_Data/Enucleation/Cellpose/Sorted/Done\models/CP_20230227_122536
+2023-02-27 22:35:57,008 [INFO] Epoch 110, Time 36174.7s, Loss 0.0197, LR 0.1000
+2023-02-27 23:27:44,639 [INFO] Epoch 120, Time 39282.3s, Loss 0.0195, LR 0.1000
+2023-02-28 00:19:19,282 [INFO] Epoch 130, Time 42376.9s, Loss 0.0193, LR 0.1000
+2023-02-28 01:10:51,083 [INFO] Epoch 140, Time 45468.7s, Loss 0.0190, LR 0.1000
+2023-02-28 02:02:15,635 [INFO] Epoch 150, Time 48553.3s, Loss 0.0187, LR 0.1000
+2023-02-28 02:53:47,606 [INFO] Epoch 160, Time 51645.3s, Loss 0.0191, LR 0.1000
+2023-02-28 03:45:27,520 [INFO] Epoch 170, Time 54745.2s, Loss 0.0195, LR 0.1000
+2023-02-28 04:36:53,063 [INFO] Epoch 180, Time 57830.7s, Loss 0.0197, LR 0.1000
+2023-02-28 05:28:19,462 [INFO] Epoch 190, Time 60917.1s, Loss 0.0187, LR 0.1000
+2023-02-28 06:14:46,742 [INFO] saving network parameters to C:/Users/kaabi/Documents/Nuceli_Data/Enucleation/Cellpose/Sorted/Done\models/CP_20230227_122536
+C:/Users/kaabi/Documents/Nuceli_Data/Enucleation/Cellpose/Sorted/Done\models/CP_20230227_122536 copied to models folder C:\Users\srivasta\.cellpose\models
+(1024, 1024, 4)
+diameter set to diam_labels ( =  180.835 )
+120-143 mask diameters for threshold match
