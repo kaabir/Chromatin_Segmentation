@@ -109,7 +109,14 @@ intensity_vector_1_voxel = cle.read_intensities_from_map(img,mask)
 
 # Chromocenter Segmentation
 # Get voxel of pixel intensity values inside the mask 
-intensity_vector= np.where(np.logical_and(mask,img),img,0)
+def intensity_vector(mask, img):
+    if not (mask.shape == img.shape):
+        return False
+      
+    mat_intensity = np.where(np.logical_and(mask,img),img,0)
+    return mat_intensity
+
+intensity_map= intensity_vector(mask, img)
 
  # Method running chromocenters segmentation.
  # Simple algorithms description :
