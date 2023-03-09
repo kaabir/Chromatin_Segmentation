@@ -45,9 +45,9 @@ transform2 = A.Compose([
     A.RandomRotate90(),
     A.Flip(),
     A.OneOf([
-        A.MotionBlur(p=0.2),
-        A.MedianBlur(blur_limit=3, p=0.1),
-        A.Blur(blur_limit=3, p=0.1),
+        #A.MotionBlur(p=0.2),
+        #A.MedianBlur(blur_limit=3, p=0.1),
+        A.Blur(blur_limit=1, p=0.1),
     ], p=0.2),
     A.ShiftScaleRotate(shift_limit=0.0625, scale_limit=0.2, rotate_limit=45, p=0.2),
     A.OneOf([
@@ -84,7 +84,7 @@ for g_name in images:
     tiff.imwrite(folder+filename+'.tif', augmented1['image'])
     augmented2 = transform2(image=img)
     filename = str(uuid.uuid4())
-    tiff.imwrite(folder+filename+'.tif', augmented1['image'])
+    tiff.imwrite(folder+filename+'.tif', augmented2['image'])
     #cv2.imwrite(folder+filename.tif, img)
 
 #for g_name in range(10):
