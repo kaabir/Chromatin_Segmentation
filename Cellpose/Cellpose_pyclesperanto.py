@@ -55,7 +55,7 @@ cellprob_threshold = 0
 
 pretrained_model = "C:/Users/kaabi/Documents/Nuceli_Data/Enucleation/Cellpose/models_trained/CP_20230306_150448_200"
 
-model_match_threshold = 27#30
+model_match_threshold = 27 #30
 flow_threshold = (31.0 - model_match_threshold) / 10.
 
 logger = io.logger_setup()
@@ -107,7 +107,10 @@ intensity_vector_1_voxel = cle.read_intensities_from_map(img,mask)
 #statistics_df = pd.DataFrame(statistics)
 #statistics_df.head()
 
-## Chromocenter Segementation
+# Chromocenter Segmentation
+# Get voxel of pixel intensity values inside the mask 
+intensity_vector= np.where(np.logical_and(mask,img),img,0)
+
  # Method running chromocenters segmentation.
  # Simple algorithms description :
  # 1- Gaussian blur
