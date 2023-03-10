@@ -55,7 +55,7 @@ cellprob_threshold = 0
 
 pretrained_model = "C:/Users/kaabi/Documents/Nuceli_Data/Enucleation/Cellpose/models_trained/CP_20230306_150448_200"
 
-model_match_threshold = 27 #30
+model_match_threshold = 30
 flow_threshold = (31.0 - model_match_threshold) / 10.
 
 logger = io.logger_setup()
@@ -125,7 +125,6 @@ threshold_Chromo = mean_Intensity + factor * stD_Intensity
 
 # Regions of intensity greater than mean/threshold value
 def Chromo_vector(intensity_vector, threshold_value):
-    
     mat_chromo = np.where(intensity_vector>threshold_value,intensity_vector,0)
     return mat_chromo
 
