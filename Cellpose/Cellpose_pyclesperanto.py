@@ -112,11 +112,33 @@ intensity_vector_1_voxel = cle.read_intensities_from_map(img,mask)
 def intensity_vector(mask, img):
     if not (mask.shape == img.shape):
         return False
-      
+    
     mat_intensity = np.where(np.logical_and(mask,img),img,0)
     return mat_intensity
 
 intensity_map= intensity_vector(mask, img)
+
+mean_Intensity = statistics['mean_intensity']
+stD_Intensity = statistics['standard_deviation_intensity']
+factor = 2.5
+threshold_Chromo = mean_Intensity + factor * stD_Intensity
+
+# Regions of intensity greater than mean/threshold value
+def Chromo_vector(intensity_vector, threshold_value):
+    
+    mat_chromo = np.where(intensity_vector>threshold_value,intensity_vector,0)
+    return mat_chromo
+
+mat_intensity = Chromo_vector(intensity_map,threshold_Chromo)
+segmented_chromo = cle.gaussian_blur(mat_intensity, sigma_x=2, sigma_y=2)
+segmented_chromo = cle.threshold_otsu(segmented_chromo)
+
+# Merge Segmented Mask
+chromo_Labels = cle.connected_components_labeling_box(segmented_chromo) #Chromo are seperate
+# Getting stats
+statistics_chromo = cle.statistics_of_labelled_pixels(img, chromo_Labels)
+chromo_Area = np.sum(statistics_chromo['area'], axis=0)
+chromo_Area = chromo_Area * px_to_um_Y*px_to_um_X
 
  # Method running chromocenters segmentation.
  # Simple algorithms description :
