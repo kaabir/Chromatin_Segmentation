@@ -139,6 +139,24 @@ statistics_chromo = cle.statistics_of_labelled_pixels(img, chromo_Labels)
 chromo_Area = np.sum(statistics_chromo['area'], axis=0)
 chromo_Area = chromo_Area * px_to_um_Y*px_to_um_X
 
+# Max Entropy Chromocenter Segmentation -> Orginial Voxel -> Blur (rx=ry=2) -> Max(Entropy Threshold) 
+intensity_map_blur = cle.gaussian_blur(intensity_map, sigma_x=2, sigma_y=2)
+entropy_Threshold_Chromo = nsitk.threshold_maximum_entropy(intensity_map_blur)
+
+# Sort Nuclei Label Mask
+for i in np.unique(merged_Labels_np)[1:]:
+    print(i)
+    if i ==1:
+        im_obj1[merged_Labels_np == i] = 1
+        viewer = napari.Viewer()
+        viewer.add_image(im_obj1)
+    elif i ==2: 
+        im_obj2[merged_Labels_np == i] = 1
+        viewer = napari.Viewer()
+        viewer.add_image(im_obj2)
+    else:
+        print(' More than three nuclei...') 
+
  # Method running chromocenters segmentation.
  # Simple algorithms description :
  # 1- Gaussian blur
