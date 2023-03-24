@@ -144,18 +144,77 @@ intensity_map_blur = cle.gaussian_blur(intensity_map, sigma_x=2, sigma_y=2)
 entropy_Threshold_Chromo = nsitk.threshold_maximum_entropy(intensity_map_blur)
 
 # Sort Nuclei Label Mask
-for i in np.unique(merged_Labels_np)[1:]:
-    print(i)
-    if i ==1:
+#print(len(np.unique(merged_Labels)))
+number_of_Nuclei = len(np.unique(merged_Labels))-1
+
+im_obj1 = np.zeros(img.shape) 
+im_obj2 = np.zeros(img.shape) 
+im_obj3 = np.zeros(img.shape)
+nuc_lbl_lst1 = []
+nuc_lbl_lst2 = []
+nuc_lbl_lst3 = []
+
+for i in np.unique(merged_Labels_np)[1:]: # Initial (1) is mask
+    if (len(np.unique(merged_Labels)-1) == 1):
+        break
+    elif i ==1:
         im_obj1[merged_Labels_np == i] = 1
-        viewer = napari.Viewer()
-        viewer.add_image(im_obj1)
+        label1 = im_obj1
+        nuc_lbl_lst1.append(label1)
+        #viewer = napari.Viewer()
+        #viewer.add_image(im_obj1)
     elif i ==2: 
         im_obj2[merged_Labels_np == i] = 1
-        viewer = napari.Viewer()
-        viewer.add_image(im_obj2)
+        label2 = im_obj2
+        nuc_lbl_lst2.append(label2)
+        #viewer = napari.Viewer()
+        #viewer.add_image(im_obj2)
+       
+    elif i ==3: 
+        im_obj3[merged_Labels_np == i] = 1
+        label3 = im_obj3
+        nuc_lbl_lst3.append(label3)        
+        #viewer = napari.Viewer()
+        #viewer.add_image(im_obj3)
+
     else:
-        print(' More than three nuclei...') 
+        print(' More than four nuclei...')    
+
+# Not replacing back the original mask values associted with labels
+# Place back the intensity values to the individual label
+def chromocenter_vector(mask, img):
+    if not (mask.shape == img.shape):
+        return False
+      
+    chromocenter_intensity = np.where(np.logical_and(mask,img),img,0) # Overlap Mask on original image (as reference)
+    return chromocenter_intensity
+
+def empty_nuclei(nuclei_label):
+    if nuclei_label:
+        #print('Label is Not an empty list')
+        return True
+    #print('Label is an empty list')
+    return False
+
+for i in np.unique(merged_Labels_np)[1:]:
+    # Nuclei one to be segmented for chromocenter 1
+    if not empty_nuclei(nuc_lbl_lst1):
+        break
+    nuc_lbl_lst1 = np.vstack(nuc_lbl_lst1)
+    intensity_map1= chromocenter_vector(nuc_lbl_lst1, img)
+    # Check the nuclei
+    viewer = napari.Viewer()
+    viewer.add_image(intensity_map1)
+    # Nuclei 2 to be segmented for chromocenter 2
+    if not empty_nuclei(nuc_lbl_lst2):
+        break
+    nuc_lbl_lst2 = np.vstack(nuc_lbl_lst2)
+    intensity_map2= chromocenter_vector(nuc_lbl_lst2, img)        
+    # Nuclei 3 to be segmented for chromocenter 3
+    if not empty_nuclei(nuc_lbl_lst3):
+        break
+    nuc_lbl_lst3 = np.vstack(nuc_lbl_lst3)
+    intensity_map3= chromocenter_vector(nuc_lbl_lst3, img)
 
  # Method running chromocenters segmentation.
  # Simple algorithms description :
