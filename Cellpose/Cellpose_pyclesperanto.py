@@ -154,7 +154,7 @@ nuc_lbl_lst1 = []
 nuc_lbl_lst2 = []
 nuc_lbl_lst3 = []
 
-for i in np.unique(merged_Labels_np)[1:]: # Initial (1) is mask
+for i in np.unique(merged_Labels_np)[1:]: # (1) is BG mask
     if (len(np.unique(merged_Labels)-1) == 1):
         break
     elif i ==1:
@@ -196,25 +196,64 @@ def empty_nuclei(nuclei_label):
     #print('Label is an empty list')
     return False
 
-for i in np.unique(merged_Labels_np)[1:]:
+for i in np.unique(merged_Labels_np)[1:]: # Background mask at 1
     # Nuclei one to be segmented for chromocenter 1
     if not empty_nuclei(nuc_lbl_lst1):
         break
     nuc_lbl_lst1 = np.vstack(nuc_lbl_lst1)
     intensity_map1= chromocenter_vector(nuc_lbl_lst1, img)
+    # Apply Thresholding for Chromocenters
+    intensity_map_blur1 = nsitk.gaussian_blur(intensity_map1, variance_x=2, variance_y=2)
+    intermodes_Threshold_Chromo1 = nsitk.threshold_intermodes(intensity_map_blur1)
+    # Get Statistics
+    chromo_Labels1 = cle.connected_components_labeling_box(intermodes_Threshold_Chromo1)
+    statistics_chromo1 = cle.statistics_of_labelled_pixels(img, chromo_Labels1)
+    # Caculate Area
+    chromo_Area1 = np.sum(statistics_chromo1['area'], axis=0)
+    chromo_Area1 = chromo_Area1 * px_to_um_Y*px_to_um_X
+    
     # Check the nuclei
     viewer = napari.Viewer()
     viewer.add_image(intensity_map1)
+    viewer.add_image(chromo_Labels1)
     # Nuclei 2 to be segmented for chromocenter 2
     if not empty_nuclei(nuc_lbl_lst2):
         break
     nuc_lbl_lst2 = np.vstack(nuc_lbl_lst2)
-    intensity_map2= chromocenter_vector(nuc_lbl_lst2, img)        
+    intensity_map2= chromocenter_vector(nuc_lbl_lst2, img) 
+    
+    intensity_map_blur2 = nsitk.gaussian_blur(intensity_map2, variance_x=2, variance_y=2)
+    intermodes_Threshold_Chromo2 = nsitk.threshold_intermodes(intensity_map_blur2)  
+
+    # Get Statistics
+    chromo_Labels2 = cle.connected_components_labeling_box(intermodes_Threshold_Chromo2)
+    statistics_chromo2 = cle.statistics_of_labelled_pixels(img, chromo_Labels2)     
+    # Caculate Area
+    chromo_Area2 = np.sum(statistics_chromo2['area'], axis=0)
+    chromo_Area2 = chromo_Area2 * px_to_um_Y*px_to_um_X
+    # Check the nuclei
+    viewer = napari.Viewer()
+    viewer.add_image(intensity_map2)
+    viewer.add_image(chromo_Labels2)
     # Nuclei 3 to be segmented for chromocenter 3
     if not empty_nuclei(nuc_lbl_lst3):
         break
     nuc_lbl_lst3 = np.vstack(nuc_lbl_lst3)
-    intensity_map3= chromocenter_vector(nuc_lbl_lst3, img)
+    intensity_map3= chromocenter_vector(nuc_lbl_lst3, img)  
+    
+    intensity_map_blur3 = cle.gaussian_blur(intensity_map3, sigma_x=2, sigma_y=2)
+    intermodes_Threshold_Chromo3 = nsitk.threshold_intermodes(intensity_map_blur3)
+    
+    # Get Statistics
+    chromo_Labels3 = cle.connected_components_labeling_box(intermodes_Threshold_Chromo3)
+    statistics_chromo3 = cle.statistics_of_labelled_pixels(img, chromo_Labels3)     
+    # Caculate Area
+    chromo_Area3 = np.sum(statistics_chromo3['area'], axis=0)
+    chromo_Area3 = chromo_Area3 * px_to_um_Y*px_to_um_X
+    # Check the nuclei
+    viewer = napari.Viewer()
+    viewer.add_image(intensity_map3)
+    viewer.add_image(chromo_Labels3)
 
  # Method running chromocenters segmentation.
  # Simple algorithms description :
