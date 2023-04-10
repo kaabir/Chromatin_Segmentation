@@ -192,7 +192,7 @@ for i in np.unique(merged_Labels_np)[1:]: # Background mask at 1
     statistics_intermodes_chromo1 = cle.statistics_of_labelled_pixels(img, chromo_intermodes_Labels1)
     
     chromointermodes_Area1 = np.sum(statistics_intermodes_chromo1['area'], axis=0)
-    chromointermodes_Area1 = chromointermodes_Area1 * px_to_um_Y*px_to_um_X
+    chromointermodes_Area1 = chromointermodes_Area1 * px_to_um_Y*px_to_um_X*px_to_um_Z
     
     # Max Entropy Chromocenter Segmentation -> Orginial Voxel -> Blur (rx=ry=2) -> Max(Entropy Threshold) 
     entropy_Threshold_Chromo1 = nsitk.threshold_maximum_entropy(intensity_map_blur1)
@@ -201,7 +201,7 @@ for i in np.unique(merged_Labels_np)[1:]: # Background mask at 1
     statistics_entropy_chromo1 = cle.statistics_of_labelled_pixels(img, chromo_entropy_Labels1)
     
     chromoentropy_Area1 = np.sum(statistics_entropy_chromo1['area'], axis=0)
-    chromoentropy_Area1 = chromoentropy_Area1 * px_to_um_Y*px_to_um_X
+    chromoentropy_Area1 = chromoentropy_Area1 * px_to_um_Y*px_to_um_X*px_to_um_Z
     
     #binary_fill_holes = binary_fill_holes(intermodes_Threshold_Chromo1)
     #exclude_tiny_label = cle.exclude_small_labels(binary_fill_holes, maximum_size = 500)
@@ -243,7 +243,7 @@ for i in np.unique(merged_Labels_np)[1:]: # Background mask at 1
     statistics_intermodes_chromo2 = cle.statistics_of_labelled_pixels(img, chromo_intermodes_Labels2)
     
     chromointermodes_Area2 = np.sum(statistics_intermodes_chromo2['area'], axis=0)
-    chromointermodes_Area2 = chromointermodes_Area2 * px_to_um_Y*px_to_um_X
+    chromointermodes_Area2 = chromointermodes_Area2 * px_to_um_Y*px_to_um_X*px_to_um_Z
     
     # Max Entropy Chromocenter Segmentation -> Orginial Voxel -> Blur (rx=ry=2) -> Max(Entropy Threshold) 
     entropy_Threshold_Chromo2 = nsitk.threshold_maximum_entropy(intensity_map_blur2)
@@ -252,7 +252,7 @@ for i in np.unique(merged_Labels_np)[1:]: # Background mask at 1
     statistics_entropy_chromo2 = cle.statistics_of_labelled_pixels(img, chromo_entropy_Labels2)
     
     chromoentropy_Area2 = np.sum(statistics_entropy_chromo2['area'], axis=0)
-    chromoentropy_Area2 = chromoentropy_Area2 * px_to_um_Y*px_to_um_X
+    chromoentropy_Area2 = chromoentropy_Area2 * px_to_um_Y*px_to_um_X*px_to_um_Z
     
     #binary_fill_holes = binary_fill_holes(intermodes_Threshold_Chromo2)
     #exclude_tiny_label = cle.exclude_small_labels(binary_fill_holes, maximum_size = 500)
@@ -293,7 +293,7 @@ for i in np.unique(merged_Labels_np)[1:]: # Background mask at 1
     statistics_intermodes_chromo3 = cle.statistics_of_labelled_pixels(img, chromo_intermodes_Labels3)
 
     chromointermodes_Area3 = np.sum(statistics_intermodes_chromo3['area'], axis=0)
-    chromointermodes_Area3 = chromointermodes_Area3 * px_to_um_Y*px_to_um_X
+    chromointermodes_Area3 = chromointermodes_Area3 * px_to_um_Y*px_to_um_X*px_to_um_Z
 
     # Max Entropy Chromocenter Segmentation -> Orginial Voxel -> Blur (rx=ry=2) -> Max(Entropy Threshold) 
     entropy_Threshold_Chromo3 = nsitk.threshold_maximum_entropy(intensity_map_blur3)
@@ -302,7 +302,7 @@ for i in np.unique(merged_Labels_np)[1:]: # Background mask at 1
     statistics_entropy_chromo3 = cle.statistics_of_labelled_pixels(img, chromo_entropy_Labels3)
 
     chromoentropy_Area3 = np.sum(statistics_entropy_chromo3['area'], axis=0)
-    chromoentropy_Area3 = chromoentropy_Area3 * px_to_um_Y*px_to_um_X
+    chromoentropy_Area3 = chromoentropy_Area3 * px_to_um_Y*px_to_um_X*px_to_um_Z
 
     #binary_fill_holes = binary_fill_holes(intermodes_Threshold_chromo3)
     #exclude_tiny_label = cle.exclude_small_labels(binary_fill_holes, maximum_size = 500)
@@ -310,15 +310,14 @@ for i in np.unique(merged_Labels_np)[1:]: # Background mask at 1
 
     # Export chromocenter statistics based on right range achieved out of both segmentation
     if chromointermodes_Area3 > 10 and chromoentropy_Area3 > 10:
-        raise ValueError('Chromocenter Segmentation Fault in Chromocenter two')
+        raise ValueError('Chromocenter Segmentation Fault in Chromocenter three')
     elif chromointermodes_Area3 > 10 :
-        pd.DataFrame(statistics_entropy_chromo3).to_excel(Result_folder+filename+'(Chromo)Chromo_statistics_2.xlsx')
+        pd.DataFrame(statistics_entropy_chromo3).to_excel(Result_folder+filename+'(Chromo)Chromo_statistics_3.xlsx')
     elif chromoentropy_Area3 > 10:
-        pd.DataFrame(statistics_intermodes_chromo3).to_excel(Result_folder+filename+'(Chromo)Chromo_statistics_2.xlsx')
+        pd.DataFrame(statistics_intermodes_chromo3).to_excel(Result_folder+filename+'(Chromo)Chromo_statistics_3.xlsx')
 
     # Check the nuclei
     viewer = napari.Viewer()
     viewer.add_image(intensity_map3)
     viewer.add_image(chromo_entropy_Labels3)
     viewer.add_image(chromo_intermodes_Labels3)
-
