@@ -113,6 +113,14 @@ def intensity_vector(mask, img):
 
 intensity_map= intensity_vector(mask, img)
 
+def normalize_intensity(k):
+    k_min = k.min(axis=(1, 2), keepdims=True)
+    k_max = k.max(axis=(1, 2), keepdims=True)
+
+    k = (k - k_min)/(k_max-k_min)
+    k[np.isnan(k)] = 0
+    return k
+
 from scipy import ndimage
 from scipy.ndimage import gaussian_filter
 
@@ -178,13 +186,15 @@ for i in np.unique(merged_Labels_np)[1:]: # Background mask at 1
         break
     nuc_lbl_lst1 = np.vstack(nuc_lbl_lst1)
     intensity_map1= chromocenter_vector(nuc_lbl_lst1, img)
+    intensity_map1_norm = normalize_intensity(intensity_map1)
     
     # Get Nucleus Statistics
     statistics_nucleus1 = cle.statistics_of_labelled_pixels(img, nuc_lbl_lst1)
     pd.DataFrame(statistics_nucleus1).to_excel(Result_folder+filename+'(Nucleus)Nucleus_statistics_1.xlsx')
- 
+    
     # Blur to enhance chromocenters
-    intensity_map_blur1 = nsitk.gaussian_blur(intensity_map1, variance_x=2, variance_y=2)
+    #intensity_map_blur1 = nsitk.gaussian_blur(intensity_map1, variance_x=2, variance_y=2)
+    intensity_map_blur1 = nsitk.median_filter(intensity_map1_norm, radius_x:=2, radius_y=2)
     # Apply Intermodes Thresholding for Chromocenters
     intermodes_Threshold_Chromo1 = nsitk.threshold_intermodes(intensity_map_blur1)
     # Caculate intermodes Area
