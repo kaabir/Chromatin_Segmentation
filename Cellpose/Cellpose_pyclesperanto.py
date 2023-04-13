@@ -114,6 +114,11 @@ def normalize_intensity(k):
     k[np.isnan(k)] = 0
     return k
 
+# structure for actin segmentation
+from scipy import ndimage as ndi
+diamond = np.zeros((3, 3, 3), dtype=bool)
+diamond[1:2, 0:3, 0:3] = True
+  
 #viewer = napari.Viewer()
 #viewer.add_image(mask)
 #viewer.add_image(intensity_map)
@@ -151,7 +156,7 @@ for i in np.unique(merged_Labels_np)[1:]: # Initial (1) is mask
         # Pad some pixels for actin with constant value which matches unique label value
         # place back actin and segment with classical thresholding
         #lbl1_actin = np.pad(label1, (25), 'constant', constant_values=(1)) # constant_values to fill mask with 
-        
+        dilated1 = ndi.binary_dilation(label1, diamond, iterations=10).astype(label1.dtype)
         #actin_lbl_lst1.append(lbl1_actin)#
         # viewer = napari.Viewer()
         # viewer.add_image(im_obj1)
