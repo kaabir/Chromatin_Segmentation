@@ -27,8 +27,16 @@ folder_path = 'C:/Users/kaabir/Documents/'
 file_path = '212155 t30 #09.tif'
 img_path = folder_path + file_path
 img = imread(img_path)
-img_actin = img[:,0,:,:] # A Channel
-img_nuclei = img[:,1,:,:] # N Channel
+
+# In case two channels
+# img_actin = img[:,0,:,:] # A Channel
+# img_nuclei = img[:,1,:,:] # N Channel
+
+# In case three channels
+img_actin = img[:,:,:,0] # A Channel
+img_dextran = img[:,:,:,1] # Dextran Channel
+img_nuclei = img[:,:,:,2] # N Channel
+
 get_Zstack = img_nuclei.shape[0]
 get_Xresl = img_nuclei.shape[1]
 get_yresl = img_nuclei.shape[2]
@@ -157,6 +165,12 @@ for i in np.unique(merged_Labels_np)[1:]: # Initial (1) is mask
         # place back actin and segment with classical thresholding
         #lbl1_actin = np.pad(label1, (25), 'constant', constant_values=(1)) # constant_values to fill mask with 
         dilated1 = ndi.binary_dilation(label1, diamond, iterations=10).astype(label1.dtype)
+        actin_img = intensity_vector(dilated1,img_actin)
+        # Apply filter  
+        actin_filter = nsitk.median_filter(actin_img, radius_x:=2, radius_y=2)
+        # Apply Otsu Threshold
+        actin_threshold_1 = nsitk.threshold_otsu(actin_filter)
+
         #actin_lbl_lst1.append(lbl1_actin)#
         # viewer = napari.Viewer()
         # viewer.add_image(im_obj1)
