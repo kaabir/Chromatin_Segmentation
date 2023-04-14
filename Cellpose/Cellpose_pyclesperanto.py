@@ -94,6 +94,7 @@ mask, flows,styles = model.eval(img,
 # Merge Segmented Mask
 merged_Labels = cle.connected_components_labeling_box(mask)
 merged_Labels_np = np.array(merged_Labels)
+merged_Labels_np = split_touching_objects(merged_Labels_np)
 
 # Getting Original intensities
 #intensity_vector = cle.read_intensities_from_map(mask, img_nuclei)
