@@ -7,6 +7,7 @@ import pandas as pd
 import glob
 import os
 import csv
+from pathlib import Path
 
 """
 Output
@@ -16,7 +17,7 @@ Output
 │   │   └── Chromo└── Count/Volume/
 │   ├── T15...
 │   └── T30...
-└── Actin
+└── VCA
     ├── T0
     │   ├── Nuclei├── Volume/Sphericity/
     │   ├── Chromo├── Count/Volume/
@@ -104,6 +105,7 @@ def read_CSV(fil_Nam):
      df.clear()
 
 def get_Filename(fil_Str):
+    #filename = Path(file_path).stem
     File_Name=fil_Str[50:]
     index = File_Name.find('Average') # Find endswith key to locate the image number
     index = index - 3 
