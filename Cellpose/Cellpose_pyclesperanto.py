@@ -169,6 +169,22 @@ for i in np.unique(merged_Labels_np)[1:]: # Initial (1) is mask
         #lbl1_actin = np.pad(label1, (25), 'constant', constant_values=(1)) # constant_values to fill mask with 
         dilated1 = ndi.binary_dilation(label1, diamond, iterations=10).astype(label1.dtype)
         actin_img = intensity_vector(dilated1,img_actin)
+        
+        dilated1 = ndi.binary_dilation(merged_Labels_np, diamond, iterations=10).astype(merged_Labels_np.dtype)
+        actin_img = intensity_vector(dilated1,img_actin)
+        actin_map_blur1 = nsitk.gaussian_blur(actin_img, variance_x=2, variance_y=2)
+        actin_thresh_otsu = nsitk.threshold_otsu(actin_map_blur1)
+        # perform skeletonization
+        selem = ball(3)
+        opened_img = binary_opening(actin_thresh_otsu, selem)
+        skeleton_actin = skeletonize_3d(actin_thresh_otsu)
+        
+        #actin_Labels1 = cle.connected_components_labeling_box(skeleton_actin)
+        statistics_actin_Labels1 = cle.statistics_of_labelled_pixels(skeleton_actin, actin_img)
+
+        actin_Labels1_Area1 = np.sum(statistics_actin_Labels1['area'], axis=0)
+        actin_Labels1_Area1 = actin_Labels1_Area1 * px_to_um_Y*px_to_um_X*px_to_um_Z
+
         # Apply filter  
         actin_filter = nsitk.median_filter(actin_img, radius_x:=2, radius_y=2)
         # Apply Otsu Threshold
