@@ -34,10 +34,13 @@ Hoescht = []    # 3 in csv eg. Channel 4 221222 RGC E-Nuc Hoescht B H3K9me2-A568
 directory = 'C:/Users/kaabi/Documents/Nuceli_Data/Fixed Nulcei Staining/221222 RGC E-Nuc Hoescht B H3K9me2-A568 H3k27me3-A647/Output_fiji_Hoescht_H3k9me2_H3k7me3/Actin'
 os.chdir(directory)
 global_path = glob.glob('*')
-extension = 'csv'
-for g_name in global_path:
-    getFiles.append(g_name)
+extension = '.csv'
 
+for g_name in global_path:
+     if g_name.endswith(extension):
+            get_files.append(g_name)
+     else:
+            print('Some random file or folders in the directory') 
         
 for f_read in getFiles:
     act_Markers = read_CSV(f_read)
