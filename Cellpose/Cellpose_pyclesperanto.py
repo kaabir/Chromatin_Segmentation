@@ -61,7 +61,7 @@ for image in get_files:
         img_nuclei = aics_image.get_image_data("ZYX", T=0, C=0) 
     elif no_chnls == 2: 
         img_actin = aics_image.get_image_data("ZYX", T=0, C=0) # A Channel
-        img_nuclei_read = aics_image.get_image_data("ZYX", T=0, C=1)
+        img_nuclei = aics_image.get_image_data("ZYX", T=0, C=1)
     elif no_chnls == 3:
         img_actin = aics_image.get_image_data("ZYX", T=0, C=0) # A Channel
         img_dextran_read = aics_image.get_image_data("ZYX", T=0, C=1) # Dextran Channel
@@ -96,7 +96,7 @@ flow_threshold = (31.0 - model_match_threshold) / 10.
 logger = io.logger_setup()
 
 model = models.CellposeModel(gpu=use_GPU, model_type=pretrained_model)#,residual_on=False, style_on=False, concatenation=False)#, resample=True, do_3D=True,stitch_threshold=1)
-mask, flows,styles = model.eval(img_nuclei_read,
+mask, flows,styles = model.eval(img_nuclei,
                                 channels =channels,
                                 #anisotropy=anisotropy,
                                 diameter=diameter, 
@@ -118,7 +118,7 @@ merged_Labels_np = np.array(merged_Labels).astype('int32')
 
 # Getting Original intensities
 #intensity_vector = cle.read_intensities_from_map(mask, img)
-statistics = cle.statistics_of_labelled_pixels(img_nuclei_read, merged_Labels)
+statistics = cle.statistics_of_labelled_pixels(img_nuclei, merged_Labels)
 #
 
 px_to_um_scaled = 4.340452764123788e-5
@@ -176,16 +176,16 @@ diamond[1:2, 0:3, 0:3] = True
 number_of_Nuclei = len(np.unique(merged_Labels))-1 # first is mask
 
 # Create an image to place a single nuleus with intensity voxel
-im_obj1 = np.zeros(img_nuclei_read.shape) 
-im_obj2 = np.zeros(img_nuclei_read.shape) 
-im_obj3 = np.zeros(img_nuclei_read.shape)
+im_obj1 = np.zeros(img_nuclei.shape) 
+im_obj2 = np.zeros(img_nuclei.shape) 
+im_obj3 = np.zeros(img_nuclei.shape)
 nuc_lbl_lst1 = []
 nuc_lbl_lst2 = []
 nuc_lbl_lst3 = []
 # Create actin mask
-act_obj1 = np.zeros(img_nuclei_read.shape)
-act_obj2 = np.zeros(img_nuclei_read.shape)
-act_obj3 = np.zeros(img_nuclei_read.shape)
+act_obj1 = np.zeros(img_nuclei.shape)
+act_obj2 = np.zeros(img_nuclei.shape)
+act_obj3 = np.zeros(img_nuclei.shape)
 # actin_lbl_lst1 = []
 # actin_lbl_lst2 = []
 # actin_lbl_lst3 = []
