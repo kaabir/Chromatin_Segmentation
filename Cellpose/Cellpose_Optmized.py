@@ -179,18 +179,15 @@ labels = measure.label(merged_Labels_np)
 for i, label in enumerate(np.unique(labels)[1:]):
     
     if label in labels:
-    
     # create a mask for the current label
-    #if (len(np.unique(merged_Labels)-1) == 1):# and no_chnls>1:
-       # break    
-        labels == label
-        ###nuc_lbl = np.array(label)
-        intensity_map= nuceleus_intensity(labels, img_nuclei)
-        statistics_nucleus = cle.statistics_of_labelled_pixels(intensity_map, labels)
+        mask = labels == label
+        #nuc_lbl = np.array(label)
+        intensity_map= nuceleus_intensity(mask, img_nuclei)
+        statistics_nucleus = cle.statistics_of_labelled_pixels(intensity_map, mask)
         pd.DataFrame(statistics_nucleus).to_excel(Result_folder+filename+'_'+ str(i)+'_(Nucleus)Nucleus_statistics.xlsx')
     
         nuclei_Area = statistics_nucleus['area']*px_to_um_Y*px_to_um_Y*px_to_um_Z
-    
+        print('nuclei_Area ---', nuclei_Area)
         # Chromocenter Segmentation
 
         intensity_map_norm = normalize_intensity(intensity_map)
@@ -199,18 +196,18 @@ for i, label in enumerate(np.unique(labels)[1:]):
         intensity_map_thb = cle.top_hat_box(intensity_map_blur, None, 10.0, 10.0, 0.0)
         intermodes_Threshold_Chromo = nsitk.threshold_intermodes(intensity_map_thb)
         statistics_intermodes_chromo = cle.statistics_of_labelled_pixels(img_nuclei, intermodes_Threshold_Chromo)
-        pd.DataFrame(statistics_intermodes_chromo).to_excel(Result_folder+filename+'_'+ str(i)+'_(Chromo)Chromo_statistics_1.xlsx')
+        pd.DataFrame(statistics_intermodes_chromo).to_excel(Result_folder+filename+'_'+ str(i)+'_(Chromo)Chromo_statistics.xlsx')
     
         chromointermodes_Area = np.sum(statistics_intermodes_chromo['area'], axis=0)
         chromointermodes_Area = chromointermodes_Area *px_to_um_X* px_to_um_Y*px_to_um_Z
-
-        # # Actin Segmentation
+        print('chromointermodes_Area ---', chromointermodes_Area)
+        # Actin Segmentation
         act_obj = np.zeros(img_nuclei.shape)
-        if 'img_actin' in locals() or 'img_actin' in globals():
-            # img_actin exists
+        if 'img_actin' in globals(): #or 'img_actin' in globals():
+            # Separate Ctrl
             pass
         
-            dilated = ndi.binary_dilation(labels, diamond, iterations=10).astype(labels.dtype)
+            dilated = ndi.binary_dilation(mask, diamond, iterations=10).astype(mask.dtype)
             actin_img = nuceleus_intensity(dilated,img_actin)
             actin_filter = nsitk.median_filter(actin_img, radius_x=2, radius_y=2, radius_z=0)
             actin_binary = nsitk.threshold_otsu(actin_filter)
@@ -223,8 +220,9 @@ for i, label in enumerate(np.unique(labels)[1:]):
     
             actin_surf_Area = np.sum(statistics_surf_actin['area'], axis=0)
             actin_surf_Area = actin_surf_Area*px_to_um_X
-            pd.DataFrame(statistics_surf_actin).to_excel(Result_folder+filename+'_'+ str(i)+'_(Actin)Actin_statistics_1.xlsx')
-
+            print(actin_surf_Area)
+            pd.DataFrame(statistics_surf_actin).to_excel(Result_folder+filename+'_'+ str(i)+'_(Actin)Actin_statistics.xlsx')
+                 
 # Next Optimization
 # from skimage import measure
 # labels = measure.label(image)
