@@ -177,48 +177,53 @@ from skimage import measure
 labels = measure.label(merged_Labels_np)
 
 for i, label in enumerate(np.unique(labels)[1:]):
+    
+    if label in labels:
+    
     # create a mask for the current label
     #if (len(np.unique(merged_Labels)-1) == 1):# and no_chnls>1:
        # break    
-    labels == label
-    ###nuc_lbl = np.array(label)
-    intensity_map= nuceleus_intensity(labels, img_nuclei)
-    statistics_nucleus = cle.statistics_of_labelled_pixels(intensity_map, labels)
-    pd.DataFrame(statistics_nucleus).to_excel(Result_folder+filename+'_'+ str(i)+'_(Nucleus)Nucleus_statistics.xlsx')
+        labels == label
+        ###nuc_lbl = np.array(label)
+        intensity_map= nuceleus_intensity(labels, img_nuclei)
+        statistics_nucleus = cle.statistics_of_labelled_pixels(intensity_map, labels)
+        pd.DataFrame(statistics_nucleus).to_excel(Result_folder+filename+'_'+ str(i)+'_(Nucleus)Nucleus_statistics.xlsx')
     
-    nuclei_Area = statistics_nucleus['area']*px_to_um_Y*px_to_um_Y*px_to_um_Z
+        nuclei_Area = statistics_nucleus['area']*px_to_um_Y*px_to_um_Y*px_to_um_Z
     
-    # Chromocenter Segmentation
-    ###intensity_map1= nuceleus_intensity(nuc_lbl, img_nuclei)
-    intensity_map_norm = normalize_intensity(intensity_map)
+        # Chromocenter Segmentation
+
+        intensity_map_norm = normalize_intensity(intensity_map)
     
-    intensity_map_blur = nsitk.median_filter(intensity_map_norm, radius_x=2, radius_y=2, radius_z=0)
-    intensity_map_thb = cle.top_hat_box(intensity_map_blur, None, 10.0, 10.0, 0.0)
-    intermodes_Threshold_Chromo = nsitk.threshold_intermodes(intensity_map_thb)
-    statistics_intermodes_chromo = cle.statistics_of_labelled_pixels(img_nuclei, intermodes_Threshold_Chromo)
-    pd.DataFrame(statistics_intermodes_chromo).to_excel(Result_folder+filename+'_'+ str(i)+'_(Chromo)Chromo_statistics_1.xlsx')
+        intensity_map_blur = nsitk.median_filter(intensity_map_norm, radius_x=2, radius_y=2, radius_z=0)
+        intensity_map_thb = cle.top_hat_box(intensity_map_blur, None, 10.0, 10.0, 0.0)
+        intermodes_Threshold_Chromo = nsitk.threshold_intermodes(intensity_map_thb)
+        statistics_intermodes_chromo = cle.statistics_of_labelled_pixels(img_nuclei, intermodes_Threshold_Chromo)
+        pd.DataFrame(statistics_intermodes_chromo).to_excel(Result_folder+filename+'_'+ str(i)+'_(Chromo)Chromo_statistics_1.xlsx')
     
-    chromointermodes_Area = np.sum(statistics_intermodes_chromo['area'], axis=0)
-    chromointermodes_Area = chromointermodes_Area *px_to_um_X* px_to_um_Y*px_to_um_Z
-    
-    # Actin Segmentation
-    act_obj = np.zeros(img_nuclei.shape)
-    
-    dilated = ndi.binary_dilation(labels, diamond, iterations=10).astype(labels.dtype)
-    actin_img = nuceleus_intensity(dilated,img_actin)
-    actin_filter = nsitk.median_filter(actin_img, radius_x=2, radius_y=2, radius_z=0)
-    actin_binary = nsitk.threshold_otsu(actin_filter)
-    
-    for i in range(actin_binary.shape[0]):
-        thinned_slice = thin(actin_binary[i])
-        act_obj[i] = thinned_slice
+        chromointermodes_Area = np.sum(statistics_intermodes_chromo['area'], axis=0)
+        chromointermodes_Area = chromointermodes_Area *px_to_um_X* px_to_um_Y*px_to_um_Z
+
+        # # Actin Segmentation
+        act_obj = np.zeros(img_nuclei.shape)
+        if 'img_actin' in locals() or 'img_actin' in globals():
+            # img_actin exists
+            pass
         
-    #np.empty(act_obj1) 
-    statistics_surf_actin = cle.statistics_of_labelled_pixels(actin_img, act_obj)
+            dilated = ndi.binary_dilation(labels, diamond, iterations=10).astype(labels.dtype)
+            actin_img = nuceleus_intensity(dilated,img_actin)
+            actin_filter = nsitk.median_filter(actin_img, radius_x=2, radius_y=2, radius_z=0)
+            actin_binary = nsitk.threshold_otsu(actin_filter)
     
-    actin_surf_Area = np.sum(statistics_surf_actin['area'], axis=0)
-    actin_surf_Area = actin_surf_Area*px_to_um_X
-    pd.DataFrame(statistics_surf_actin).to_excel(Result_folder+filename+'_'+ str(i)+'_(Actin)Actin_statistics_1.xlsx')
+            for i in range(actin_binary.shape[0]):
+                thinned_slice = thin(actin_binary[i])
+                act_obj[i] = thinned_slice
+
+            statistics_surf_actin = cle.statistics_of_labelled_pixels(actin_img, act_obj)
+    
+            actin_surf_Area = np.sum(statistics_surf_actin['area'], axis=0)
+            actin_surf_Area = actin_surf_Area*px_to_um_X
+            pd.DataFrame(statistics_surf_actin).to_excel(Result_folder+filename+'_'+ str(i)+'_(Actin)Actin_statistics_1.xlsx')
 
 # Next Optimization
 # from skimage import measure
