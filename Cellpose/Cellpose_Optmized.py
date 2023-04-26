@@ -141,13 +141,13 @@ for image in get_files:
     # Chromocenter Segmentation
     # Get voxel of pixel intensity values inside the mask 
 
-    def nuceleus_intensity(mask, img):
+    def nucleus_intensity(mask, img):
         if not (mask.shape == img.shape):
             return False
 
-        nuceleus_intensity = np.where(np.logical_and(mask,img),img,0) # Overlap Mask on original image (as reference)
+        nucleus_intensity = np.where(np.logical_and(mask,img),img,0) # Overlap Mask on original image (as reference)
         #chromocenter_intensity = np.array(cle.replace_intensities(mask,img))
-        return nuceleus_intensity
+        return nucleus_intensity
 
     def normalize_intensity(k):
     #k_min = k.min(axis=(1, 2), keepdims=True)
@@ -158,6 +158,22 @@ for image in get_files:
         k = (k - k_min)/(k_max-k_min)
         k[np.isnan(k)] = 0
         return k
+
+    def trim_array(arr, mask):
+        bounding_box = tuple(
+            slice(np.min(indexes), np.max(indexes) + 1)
+            for indexes in np.where(mask))
+        return arr[bounding_box]
+
+
+    def calculate_surface_area(mask, threshold=None):
+    # generate surface mesh using marching cubes algorithm
+        verts, faces, _, _ = measure.marching_cubes(mask)
+        # calculate surface area using mesh surface area function
+        surface_area = measure.mesh_surface_area(verts, faces)
+        #surface_area = surface_area*px_to_um_Y*px_to_um_Y*px_to_um_Z
+
+        return surface_area
 
     diamond = np.zeros((3, 3, 3), dtype=bool)
     diamond[1:2, 0:3, 0:3] = True
@@ -184,7 +200,7 @@ for image in get_files:
                 # break    
             mask = labels == label
             ###nuc_lbl = np.array(label)
-            intensity_nucelus= nuceleus_intensity(mask, img_nuclei)
+            intensity_nucelus= nucleus_intensity(mask, img_nuclei)
             image1_gb = nsitk.gaussian_blur(intensity_nucelus, 2.0, 2.0, 0.0)
             # threshold isodata
             image2_T = nsitk.threshold_isodata(image1_gb)
@@ -192,7 +208,7 @@ for image in get_files:
             image3_C = nsitk.connected_component_labeling(image2_T)
         
             statistics_nucleus = cle.statistics_of_labelled_pixels(intensity_nucelus, mask)
-            pd.DataFrame(statistics_nucleus).to_excel(Result_folder+filename+'_'+ str(i)+'_(Nucleus)Nucleus_statistics.xlsx')
+            pd.DataFrame(statistics_nucleus).to_excel(Result_folder+'(Nucleus)Nucleus_statistics_'+filename+'_'+ str(i) +'.xlsx')
     
             nuclei_Area = statistics_nucleus['area']*px_to_um_Y*px_to_um_Y*px_to_um_Z
             print('nuclei_Area ---', nuclei_Area)
@@ -204,7 +220,7 @@ for image in get_files:
             intensity_map_thb = cle.top_hat_box(intensity_map_blur, None, 10.0, 10.0, 0.0)
             intermodes_Threshold_Chromo = nsitk.threshold_intermodes(intensity_map_thb)
             statistics_intermodes_chromo = cle.statistics_of_labelled_pixels(img_nuclei, intermodes_Threshold_Chromo)
-            pd.DataFrame(statistics_intermodes_chromo).to_excel(Result_folder+filename+'_'+ str(i)+'_(Chromo)Chromo_statistics.xlsx')
+            pd.DataFrame(statistics_intermodes_chromo).to_excel(Result_folder+'(Chromo)Chromo_statistics_'+filename+'_'+ str(i) +'.xlsx') 
     
             chromointermodes_Area = np.sum(statistics_intermodes_chromo['area'], axis=0)
             chromointermodes_Area = chromointermodes_Area *px_to_um_X* px_to_um_Y*px_to_um_Z
@@ -216,7 +232,7 @@ for image in get_files:
                 pass
         
                 dilated = ndi.binary_dilation(mask, diamond, iterations=10).astype(mask.dtype)
-                actin_img = nuceleus_intensity(dilated,img_actin)
+                actin_img = nucleus_intensity(dilated,img_actin)
                 actin_filter = nsitk.median_filter(actin_img, radius_x=2, radius_y=2, radius_z=0)
                 actin_binary = nsitk.threshold_otsu(actin_filter)
     
@@ -229,7 +245,7 @@ for image in get_files:
                 actin_surf_Area = np.sum(statistics_surf_actin['area'], axis=0)
                 actin_surf_Area = actin_surf_Area*px_to_um_X
                 print(actin_surf_Area)
-                pd.DataFrame(statistics_surf_actin).to_excel(Result_folder+filename+'_'+ str(i)+'_(Actin)Actin_statistics.xlsx')
+                pd.DataFrame(statistics_surf_actin).to_excel(Result_folder+'(Actin)Actin_statistics_'+filename+'_'+ str(i) +'.xlsx') 
                   
                 os.chdir(folder_path)
                 
