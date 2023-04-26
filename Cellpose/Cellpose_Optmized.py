@@ -39,6 +39,16 @@ device = cle.select_device("gfx1032")
 # Read the Tif/CZI File
 get_files = []
 
+def folder_scan(directory):
+    # Actin after 30min - value assigned is 3
+    get_files = []
+    extension = ".tif"  # ".czi"
+    for root, dirs, files in os.walk(directory):
+        for f_name in files:
+            if f_name.endswith(extension):
+                get_files.append(os.path.join(root, f_name))
+    return get_files
+##
 def folder_Scan(directory):
     # Actin after  30min  - value assigned is 3
     os.chdir(directory)
@@ -248,6 +258,28 @@ for image in get_files:
                 pd.DataFrame(statistics_surf_actin).to_excel(Result_folder+'(Actin)Actin_statistics_'+filename+'_'+ str(i) +'.xlsx') 
                   
                 os.chdir(folder_path)
+                
+def analyze_actin(mask, img_actin, filename, i):
+    dilated = ndi.binary_dilation(mask, diamond, iterations=10).astype(mask.dtype)
+    actin_img = nucleus_intensity(dilated, img_actin)
+    actin_filter = nsitk.median_filter(actin_img, radius_x=2, radius_y=2, radius_z=0)
+    actin_binary = nsitk.threshold_otsu(actin_filter)
+
+    act_obj = np.zeros_like(actin_binary, dtype=bool)
+
+    # Apply thinning function to each slice of the actin binary image
+    act_obj = np.apply_along_axis(thin, axis=0, arr=actin_binary)
+
+    statistics_surf_actin = cle.statistics_of_labelled_pixels(actin_img, act_obj)
+
+    actin_surf_Area = np.sum(statistics_surf_actin['area'], axis=0)
+    actin_surf_Area = actin_surf_Area * px_to_um_X
+    print(actin_surf_Area)
+    
+    # Write statistics to Excel file
+    statistics_df = pd.DataFrame(statistics_surf_actin)
+    statistics_df.to_excel(Result_folder + '(Actin)Actin_statistics_' + filename + '_' + str(i) + '.xlsx')
+
                 
 # Next Optimization
 # from skimage import measure
