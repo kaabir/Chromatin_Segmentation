@@ -70,6 +70,18 @@ px_to_um_X = 0.0351435
 px_to_um_Y = 0.0351435
 px_to_um_Z = 1 #1.0/0.0351435 # making pixels isotropic
 
+for image in get_files:
+    aics_image = AICSImage(image)
+    filename = Path(image).stem
+    
+    img_data = aics_image.data.squeeze()  # remove any extra dimensions of size 1
+    
+    img_actin = img_data[..., 0] if img_data.shape[-1] >= 1 else None
+    img_dextran_read = img_data[..., 1] if img_data.shape[-1] >= 2 else None
+    img_nuclei = img_data[..., -1] if img_data.shape[-1] >= 1 else None
+    
+    # For saving results #.stem
+    Result_folder = folder_path + '/Result/'
 
 for image in get_files:
 
@@ -279,6 +291,8 @@ def analyze_actin(mask, img_actin, filename, i):
     # Write statistics to Excel file
     statistics_df = pd.DataFrame(statistics_surf_actin)
     statistics_df.to_excel(Result_folder + '(Actin)Actin_statistics_' + filename + '_' + str(i) + '.xlsx')
+    
+analyze_actin(mask, img_actin, filename, i)
 
                 
 # Next Optimization
