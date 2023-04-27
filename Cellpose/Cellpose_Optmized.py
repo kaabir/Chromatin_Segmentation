@@ -4,7 +4,6 @@ Created on Wed Apr 24 11:54:07 2023
 
 @author: kaabir
 """
-
 import time, os, sys
 import glob
 import skimage.io 
@@ -36,52 +35,84 @@ from scipy import ndimage as ndi
 device = cle.select_device("gfx1032")
 #device = cle.select_device("AMD Radeon Pro W6600")
 
-# Read the Tif/CZI File
-get_files = []
+def nucleus_intensity(mask, img):
+    if not (mask.shape == img.shape):
+        return False
 
+    nucleus_intensity = np.where(np.logical_and(mask,img),img,0) # Overlap Mask on original image (as reference)
+    #chromocenter_intensity = np.array(cle.replace_intensities(mask,img))
+    return nucleus_intensity
+
+def normalize_intensity(k):
+    #k_min = k.min(axis=(1, 2), keepdims=True)
+    #k_max = k.max(axis=(1, 2), keepdims=True)
+    k_min = k.min()
+    k_max = k.max()
+
+    k = (k - k_min)/(k_max-k_min)
+    k[np.isnan(k)] = 0
+    return k
+
+def trim_array(arr, mask):
+    bounding_box = tuple(
+    slice(np.min(indexes), np.max(indexes) + 1)
+    for indexes in np.where(mask))
+    return arr[bounding_box]
+
+def analyze_actin(mask, img_actin, filename, i):
+    act_obj = np.zeros(img_nuclei.shape)
+    dilated = ndi.binary_dilation(mask, diamond, iterations=10).astype(mask.dtype)
+    actin_img = nucleus_intensity(dilated, img_actin)
+    actin_filter = nsitk.median_filter(actin_img, radius_x=2, radius_y=2, radius_z=0)
+    actin_binary = nsitk.threshold_otsu(actin_filter)
+
+    act_obj = np.zeros(img_nuclei.shape)
+
+    # Apply thinning function to each slice of the actin binary image
+    for i in range(actin_binary.shape[0]):
+        thinned_slice = thin(actin_binary[i])
+        act_obj[i] = thinned_slice
+
+    statistics_surf_actin = cle.statistics_of_labelled_pixels(actin_img, act_obj)
+
+    actin_surf_Area = np.sum(statistics_surf_actin['area'], axis=0)
+    actin_surf_Area = actin_surf_Area * px_to_um_X
+    print('Actin_surf_Area ---', actin_surf_Area)
+    
+    # Write statistics to Excel file
+    statistics_df = pd.DataFrame(statistics_surf_actin)
+    statistics_df.to_excel(Result_folder + '(Actin)Actin_statistics_' + filename + '_' + str(i) + '.xlsx')
+    
+
+def calculate_surface_area(mask, threshold=None):
+    # generate surface mesh using marching cubes algorithm
+    verts, faces, _, _ = measure.marching_cubes(mask)
+        # calculate surface area using mesh surface area function
+    surface_area = measure.mesh_surface_area(verts, faces)
+    #surface_area = surface_area*px_to_um_Y*px_to_um_Y*px_to_um_Z
+
+    return surface_area
+
+# Read the Tif/CZI File
 def folder_scan(directory):
     # Actin after 30min - value assigned is 3
     get_files = []
     extension = ".tif"  # ".czi"
-    for root, dirs, files in os.walk(directory):
-        for f_name in files:
-            if f_name.endswith(extension):
-                get_files.append(os.path.join(root, f_name))
+    for f_name in os.listdir(directory):
+        if f_name.endswith(extension):
+            get_files.append(os.path.join(directory, f_name))
     return get_files
-##
-def folder_Scan(directory):
-    # Actin after  30min  - value assigned is 3
-    os.chdir(directory)
-    global_path = glob.glob('*')
-    
-    extension = '.tif' # '.czi'
-    for g_name in global_path:
-        if g_name.endswith(extension):
-            get_files.append(g_name)
-        #else:
-            #print('Some random file or folders in the directory')    
 
-folder_path = 'C:/Users/kaabi/Documents/Nuceli_Data/Enucleation/Cellpose/230120 OF1 Enuc Actin5 Ctrl5/'
 
-folder_Scan(folder_path)
+folder_path = 'C:/Users/kaabi/Documents/Nuceli_Data/Enucleation/Cellpose/Test_Dataset_Nuclei/15-12-2022/'
+
+get_files = folder_scan(folder_path)
 
 # Conversion to um
 px_to_um_X = 0.0351435
 px_to_um_Y = 0.0351435
 px_to_um_Z = 1 #1.0/0.0351435 # making pixels isotropic
 
-for image in get_files:
-    aics_image = AICSImage(image)
-    filename = Path(image).stem
-    
-    img_data = aics_image.data.squeeze()  # remove any extra dimensions of size 1
-    
-    img_actin = img_data[..., 0] if img_data.shape[-1] >= 1 else None
-    img_dextran_read = img_data[..., 1] if img_data.shape[-1] >= 2 else None
-    img_nuclei = img_data[..., -1] if img_data.shape[-1] >= 1 else None
-    
-    # For saving results #.stem
-    Result_folder = folder_path + '/Result/'
 
 for image in get_files:
 
@@ -103,9 +134,13 @@ for image in get_files:
         img_chnl2_read = aics_image.get_image_data("ZYX", T=0, C=1) # Dextran Channel
         img_chnl3_read = aics_image.get_image_data("ZYX", T=0, C=2)
         img_nuclei = aics_image.get_image_data("ZYX", T=0, C=3)
-
-    # For saving results #.stem
+    
+    if not os.path.exists(folder_path + '/Result'):
+        os.makedirs(folder_path + '/Result')
+        
     Result_folder = folder_path + '/Result/' 
+    # For saving results #.stem
+
     # Upscale the Z dimension to be isotropic
 
     # channel to segment and nuclear channel 
@@ -151,62 +186,13 @@ for image in get_files:
     prediction_stack_32 = img_as_float32(mask, force_copy=False)     
     os.chdir(Result_folder)
     imwrite(filename+".tif", prediction_stack_32)
-    #merged_Labels_np = np.array(merged_Labels).astype('int32')
     #merged_Labels_np = split_touching_objects(merged_Labels_np)
 
-    # Getting Original intensities
-    #intensity_vector = cle.read_intensities_from_map(mask, img)
-    #statistics = cle.statistics_of_labelled_pixels(img_nuclei, merged_Labels)
-
-    #nuclei_Area = statistics['area']*px_to_um_Y*px_to_um_Y*px_to_um_Z
-
-    # Chromocenter Segmentation
-    # Get voxel of pixel intensity values inside the mask 
-
-    def nucleus_intensity(mask, img):
-        if not (mask.shape == img.shape):
-            return False
-
-        nucleus_intensity = np.where(np.logical_and(mask,img),img,0) # Overlap Mask on original image (as reference)
-        #chromocenter_intensity = np.array(cle.replace_intensities(mask,img))
-        return nucleus_intensity
-
-    def normalize_intensity(k):
-    #k_min = k.min(axis=(1, 2), keepdims=True)
-    #k_max = k.max(axis=(1, 2), keepdims=True)
-        k_min = k.min()
-        k_max = k.max()
-
-        k = (k - k_min)/(k_max-k_min)
-        k[np.isnan(k)] = 0
-        return k
-
-    def trim_array(arr, mask):
-        bounding_box = tuple(
-            slice(np.min(indexes), np.max(indexes) + 1)
-            for indexes in np.where(mask))
-        return arr[bounding_box]
-
-
-    def calculate_surface_area(mask, threshold=None):
-    # generate surface mesh using marching cubes algorithm
-        verts, faces, _, _ = measure.marching_cubes(mask)
-        # calculate surface area using mesh surface area function
-        surface_area = measure.mesh_surface_area(verts, faces)
-        #surface_area = surface_area*px_to_um_Y*px_to_um_Y*px_to_um_Z
-
-        return surface_area
-
+    # Structure  for Actin Dilation
     diamond = np.zeros((3, 3, 3), dtype=bool)
     diamond[1:2, 0:3, 0:3] = True
 
-    #print(len(np.unique(merged_Labels)))
-    number_of_Nuclei = len(np.unique(merged_Labels_np))-1 # first is mask
-
-    # Create an image to place a single nuleus with intensity voxel
-    im_obj = np.zeros(img_nuclei.shape) 
-
-    nuc_lbl_lst1 = []
+    #print('Number_of_Nuclei',len(np.unique(merged_Labels))-1) first is mask
 
     from skimage import measure
     labels = measure.label(merged_Labels_np)
@@ -214,7 +200,7 @@ for image in get_files:
 
     for i, label in enumerate(np.unique(labels)[1:]):
         print('i ---', i)
-        print('label ---', label)
+        #print('label ---', label)
         if label in labels:
             print('label ---', label)
             # create a mask for the current label
@@ -232,7 +218,8 @@ for image in get_files:
             statistics_nucleus = cle.statistics_of_labelled_pixels(intensity_nucelus, mask)
             pd.DataFrame(statistics_nucleus).to_excel(Result_folder+'(Nucleus)Nucleus_statistics_'+filename+'_'+ str(i) +'.xlsx')
     
-            nuclei_Area = statistics_nucleus['area']*px_to_um_Y*px_to_um_Y*px_to_um_Z
+            nuclei_Area = np.sum(statistics_nucleus['area'], axis=0)
+            nuclei_Area = nuclei_Area*px_to_um_Y*px_to_um_Y*px_to_um_Z
             print('nuclei_Area ---', nuclei_Area)
             # Chromocenter Segmentation
 
@@ -248,52 +235,12 @@ for image in get_files:
             chromointermodes_Area = chromointermodes_Area *px_to_um_X* px_to_um_Y*px_to_um_Z
             print('chromointermodes_Area ---', chromointermodes_Area)
             # Actin Segmentation
-            act_obj = np.zeros(img_nuclei.shape)
+ 
             if 'img_actin' in globals(): #or 'img_actin' in globals():
                 # Separate Ctrl
                 pass
-        
-                dilated = ndi.binary_dilation(mask, diamond, iterations=10).astype(mask.dtype)
-                actin_img = nucleus_intensity(dilated,img_actin)
-                actin_filter = nsitk.median_filter(actin_img, radius_x=2, radius_y=2, radius_z=0)
-                actin_binary = nsitk.threshold_otsu(actin_filter)
-    
-                for i in range(actin_binary.shape[0]):
-                    thinned_slice = thin(actin_binary[i])
-                    act_obj[i] = thinned_slice
-
-                statistics_surf_actin = cle.statistics_of_labelled_pixels(actin_img, act_obj)
-    
-                actin_surf_Area = np.sum(statistics_surf_actin['area'], axis=0)
-                actin_surf_Area = actin_surf_Area*px_to_um_X
-                print(actin_surf_Area)
-                pd.DataFrame(statistics_surf_actin).to_excel(Result_folder+'(Actin)Actin_statistics_'+filename+'_'+ str(i) +'.xlsx') 
-                  
-                os.chdir(folder_path)
-                
-def analyze_actin(mask, img_actin, filename, i):
-    dilated = ndi.binary_dilation(mask, diamond, iterations=10).astype(mask.dtype)
-    actin_img = nucleus_intensity(dilated, img_actin)
-    actin_filter = nsitk.median_filter(actin_img, radius_x=2, radius_y=2, radius_z=0)
-    actin_binary = nsitk.threshold_otsu(actin_filter)
-
-    act_obj = np.zeros_like(actin_binary, dtype=bool)
-
-    # Apply thinning function to each slice of the actin binary image
-    act_obj = np.apply_along_axis(thin, axis=0, arr=actin_binary)
-
-    statistics_surf_actin = cle.statistics_of_labelled_pixels(actin_img, act_obj)
-
-    actin_surf_Area = np.sum(statistics_surf_actin['area'], axis=0)
-    actin_surf_Area = actin_surf_Area * px_to_um_X
-    print(actin_surf_Area)
-    
-    # Write statistics to Excel file
-    statistics_df = pd.DataFrame(statistics_surf_actin)
-    statistics_df.to_excel(Result_folder + '(Actin)Actin_statistics_' + filename + '_' + str(i) + '.xlsx')
-    
-analyze_actin(mask, img_actin, filename, i)
-
+            
+                analyze_actin(mask, img_actin, filename, i)
                 
 # Next Optimization
 # from skimage import measure
