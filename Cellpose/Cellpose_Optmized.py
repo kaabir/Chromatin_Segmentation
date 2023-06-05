@@ -214,11 +214,15 @@ for image in get_files:
             # connected component labeling
             image3_C = nsitk.connected_component_labeling(image2_T)
         
-            statistics_nucleus = cle.statistics_of_labelled_pixels(intensity_nucelus, mask)
-            pd.DataFrame(statistics_nucleus).to_excel(Result_folder+'(Nucleus)Nucleus_statistics_'+filename+'_'+ str(i) +'.xlsx')
-    
-            nuclei_Area = np.sum(statistics_nucleus['area'], axis=0)
-            nuclei_Area = nuclei_Area*px_to_um_Y*px_to_um_Y*px_to_um_Z
+            statistics_nucleus = nsitk.label_statistics(intensity_image=intensity_nucelus, label_image=mask,
+                                                size = True, intensity = True, perimeter= True,
+                                                shape= True, position= True)#, moments= True)
+        
+            nuclei_Area = statistics_nucleus.iloc[0, 26]
+
+            pd.DataFrame(statistics_nucleus).to_excel(Result_folder+filename+'_'+ str(i)+'_(Nucleus)Nucleus_statistics.xlsx')
+        
+            nuclei_Area = nuclei_Area*px_to_um_X*px_to_um_Y*px_to_um_Z
             print('nuclei_Area ---', nuclei_Area)
             # Chromocenter Segmentation
 
@@ -227,12 +231,37 @@ for image in get_files:
             intensity_map_blur = nsitk.median_filter(intensity_map_norm, radius_x=2, radius_y=2, radius_z=0)
             intensity_map_thb = cle.top_hat_box(intensity_map_blur, None, 10.0, 10.0, 0.0)
             intermodes_Threshold_Chromo = nsitk.threshold_intermodes(intensity_map_thb)
-            statistics_intermodes_chromo = cle.statistics_of_labelled_pixels(img_nuclei, intermodes_Threshold_Chromo)
+
+            statistics_intermodes_chromo = nsitk.label_statistics(intensity_image=img_nuclei, label_image=intermodes_Threshold_Chromo,
+                                                size = True, intensity = True, perimeter= True,
+                                                shape= True, position= True)#, moments= True)
+            
             pd.DataFrame(statistics_intermodes_chromo).to_excel(Result_folder+'(Chromo)Chromo_statistics_'+filename+'_'+ str(i) +'.xlsx') 
-    
-            chromointermodes_Area = np.sum(statistics_intermodes_chromo['area'], axis=0)
-            chromointermodes_Area = chromointermodes_Area *px_to_um_X* px_to_um_Y*px_to_um_Z
+            
+            intermodes_chromo_Area = statistics_intermodes_chromo.iloc[0, 26]
+            
+            chromointermodes_Area = intermodes_chromo_Area *px_to_um_X* px_to_um_Y*px_to_um_Z
             print('chromointermodes_Area ---', chromointermodes_Area)
+            
+            # YH2AX Segmentation
+            statistics_yh2ax = nsitk.label_statistics(intensity_image=img_yh2ax, label_image=dilated,
+                                                size = True, intensity = True, perimeter= True,
+                                                shape= True, position= True)#, moments= True)
+          
+            statistics_yh2ax.to_excel(Result_folder + '(YH2AX)YH2AX_statistics_' + filename + '_' + str(i) + '.xlsx')   
+            yh2ax_Intensity = statistics_yh2ax.iloc[0, 2]
+            print('YH2AX_Intensity ---', yh2ax_Intensity)
+            
+            # LaminB1 Segmentation
+
+            statistics_laminb1 = nsitk.label_statistics(intensity_image=img_laminb1, label_image=dilated,
+                                    size = True, intensity = True, perimeter= True,
+                                    shape= True, position= True)#, moments= True)
+            statistics_laminb1.to_excel(Result_folder + '(LaminB1)LaminB1_statistics_' + filename + '_' + str(i) + '.xlsx')   
+
+            laminb1_Intensity = statistics_laminb1.iloc[0, 2]
+            print('LaminB1_Intensity ---', laminb1_Intensity)
+            
             # Actin Segmentation
  
             if 'img_actin' in globals(): #or 'img_actin' in globals():
