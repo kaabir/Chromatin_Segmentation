@@ -35,13 +35,13 @@ from scipy import ndimage as ndi
 device = cle.select_device("gfx1032")
 #device = cle.select_device("AMD Radeon Pro W6600")
 
-def nucleus_intensity(mask, img):
+def replace_intensity(mask, img):
     if not (mask.shape == img.shape):
         return False
 
-    nucleus_intensity = np.where(np.logical_and(mask,img),img,0) # Overlap Mask on original image (as reference)
+    replace_intensity = np.where(np.logical_and(mask,img),img,0) # Overlap Mask on original image (as reference)
     #chromocenter_intensity = np.array(cle.replace_intensities(mask,img))
-    return nucleus_intensity
+    return replace_intensity
 
 def normalize_intensity(k):
     #k_min = k.min(axis=(1, 2), keepdims=True)
@@ -62,7 +62,7 @@ def trim_array(arr, mask):
 def analyze_actin(mask, img_actin, filename, i):
     act_obj = np.zeros(img_nuclei.shape)
     dilated = ndi.binary_dilation(mask, diamond, iterations=10).astype(mask.dtype)
-    actin_img = nucleus_intensity(dilated, img_actin)
+    actin_img = replace_intensity(dilated, img_actin)
     actin_filter = nsitk.median_filter(actin_img, radius_x=2, radius_y=2, radius_z=0)
     actin_binary = nsitk.threshold_otsu(actin_filter)
 
@@ -93,9 +93,8 @@ def calculate_surface_area(mask, threshold=None):
 
     return surface_area
 
-# Read the Tif/CZI File
+# Collect the Tif/CZI File
 def folder_scan(directory):
-    # Actin after 30min - value assigned is 3
     get_files = []
     extension = ".tif"  # ".czi"
     for f_name in os.listdir(directory):
@@ -103,15 +102,15 @@ def folder_scan(directory):
             get_files.append(os.path.join(directory, f_name))
     return get_files
 
-
+# Input folder
 folder_path = 'C:/Users/kaabi/Documents/Nuceli_Data/Enucleation/Cellpose/Test_Dataset_Nuclei/15-12-2022/'
-
+# Function to get all images
 get_files = folder_scan(folder_path)
 
-# Conversion to um
+# Conversion to um scale
 px_to_um_X = 0.0351435
 px_to_um_Y = 0.0351435
-px_to_um_Z = 1 #1.0/0.0351435 # making pixels isotropic
+px_to_um_Z = 1 #0.32 fixed samples #1.0/0.0351435 for making pixels isotropic
 
 
 for image in get_files:
@@ -208,7 +207,7 @@ for image in get_files:
                 # break    
             mask = labels == label
             ###nuc_lbl = np.array(label)
-            intensity_nucelus= nucleus_intensity(mask, img_nuclei)
+            intensity_nucelus= replace_intensity(mask, img_nuclei)
             image1_gb = nsitk.gaussian_blur(intensity_nucelus, 2.0, 2.0, 0.0)
             # threshold isodata
             image2_T = nsitk.threshold_isodata(image1_gb)
