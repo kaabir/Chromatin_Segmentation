@@ -59,6 +59,10 @@ def trim_array(arr, mask):
     for indexes in np.where(mask))
     return arr[bounding_box]
 
+def connected_components_labeling_box(binary_input):
+    labeled_array, num_labels = label(binary_input)
+    return labeled_array
+
 def analyze_actin(mask, img_actin, filename, i):
     act_obj = np.zeros(img_nuclei.shape)
     dilated = ndi.binary_dilation(mask, diamond, iterations=10).astype(mask.dtype)
@@ -179,7 +183,8 @@ for image in get_files:
 
     # Merge Segmented Mask
 
-    merged_Labels = cle.connected_components_labeling_box(mask)
+    #merged_Labels = cle.connected_components_labeling_box(mask)
+    merged_Labels = connected_components_labeling_box(mask)
     merged_Labels_np = np.array(merged_Labels).astype('int32')
 
     prediction_stack_32 = img_as_float32(mask, force_copy=False)     
