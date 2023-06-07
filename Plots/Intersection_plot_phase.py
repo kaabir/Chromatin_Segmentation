@@ -52,3 +52,31 @@ plt.title('Phase Diagram of Critical Flow Rates for Tissue Ejection')
 plt.legend()
 plt.grid(True)
 plt.show()
+
+#####################
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Data points for phase 1 (intersecting forces)
+y_phase1 = np.array([7.961211776256691e-12, 6.579813183257682e-12, 5.852041130083344e-12,
+                   5.484782218167517e-12, 5.244229884635557e-12, 5.11731509027492e-12,
+                   5.0090269779292335e-12, 4.871276850953692e-12, 4.759999786105732e-12,
+                   4.636811579419479e-12, 4.553836439162763e-12, 4.490225281887017e-12,
+                   4.473323101008935e-12, 4.563046835361546e-12, 4.756943888324993e-12,
+                   5.2617654250817256e-12, 6.5596210951035404e-12])  # Critical flow rates
+x_phase1 = np.linspace(min(y_phase1), max(y_phase1), len(y_phase1))  # Corresponding x-values
+
+# Base range for the phase diagram
+x_base_range = np.linspace(0, 1.0E-11, 100)
+y_base_range = np.linspace(1.0E-11, 1.0E-11, 100)
+
+# Plotting the phase diagram
+plt.plot(x_phase1, y_phase1, marker='+', label=' Data')
+plt.fill_between(x_base_range, y_base_range, color='gray', alpha=0.3, label='Phase 2 Region')
+plt.fill_between(x_phase1, y_phase1, color='blue', alpha=0.3, label='Phase 1 Region')
+plt.xlabel('Velocity (m3/s)')
+plt.ylabel('Force Intersection Points ')
+plt.title('Transition Phase Diagram')
+plt.legend()
+plt.show()
