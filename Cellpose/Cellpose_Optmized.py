@@ -83,6 +83,9 @@ def analyze_actin(mask, img_actin, filename, i):
     statistics_df = pd.DataFrame(statistics_surf_actin)
     statistics_df.to_excel(Result_folder + '(Actin)Actin_statistics_' + filename + '_' + str(i) + '.xlsx')
     
+def connected_components_labeling_box(binary_input):
+    labeled_array, num_labels = label(binary_input)
+    return labeled_array
 
 def calculate_surface_area(mask, threshold=None):
     # generate surface mesh using marching cubes algorithm
@@ -179,7 +182,8 @@ for image in get_files:
 
     # Merge Segmented Mask
 
-    merged_Labels = cle.connected_components_labeling_box(mask)
+    merged_Labels = connected_components_labeling_box(mask)
+    #merged_Labels = cle.connected_components_labeling_box(mask)
     merged_Labels_np = np.array(merged_Labels).astype('int32')
 
     prediction_stack_32 = img_as_float32(mask, force_copy=False)     
