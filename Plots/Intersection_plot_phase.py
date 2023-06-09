@@ -57,31 +57,53 @@ plt.show()
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.ticker import (AutoMinorLocator, MultipleLocator)
 
-# Data points for phase 1 (intersecting forces at velocity range)
+# Data points for phase 1 (intersecting forces)
 y_phase1 = np.array([7.961211776256691e-12, 6.579813183257682e-12, 5.852041130083344e-12,
                    5.484782218167517e-12, 5.244229884635557e-12, 5.11731509027492e-12,
                    5.0090269779292335e-12, 4.871276850953692e-12, 4.759999786105732e-12,
                    4.636811579419479e-12, 4.553836439162763e-12, 4.490225281887017e-12,
                    4.473323101008935e-12, 4.563046835361546e-12, 4.756943888324993e-12,
-                   5.2617654250817256e-12, 6.5596210951035404e-12])  # Critical flow rates
+                   5.2617654250817256e-12, 6.5596210951035404e-12, 7.20083299835201e-12])  # Critical flow rates
 #x_phase1 = np.linspace(min(y_phase1), max(y_phase1), len(y_phase1))  # Corresponding x-values
 # 0.1*d_p,0.05*d_p,0.95*d_p
-x_phase1 = np.linspace(0.1, 0.90, 17)
+x_phase1 = np.linspace(0.1, 0.925, 18)
 # 0.0025, 0.0225
 
 # Base range for the phase diagram
 x_base_range = np.linspace(0, 1, 100)
 y_base_range = np.linspace(1.0E-11, 1.0E-11, 100)
 
+fig, ax = plt.subplots(figsize=(6, 6))
+
 # Plotting the phase diagram
-plt.plot(x_phase1, y_phase1, marker='+', label='')
-plt.fill_between(x_base_range, y_base_range, color='gray', alpha=0.3, label='Sediment (F_g > F_lift)')
-plt.fill_between(x_phase1, y_phase1, color='blue', alpha=0.3, label='Lift (F_g < F_lift)')
-plt.xlabel('Ratio d_GUV/well_diameter')
-plt.ylabel('Flow velocity (m3/s)')
+plt.plot(x_phase1, y_phase1, color='#FF6D60', marker='+', label='')
+plt.fill_between(x_base_range, y_base_range, color='#F3E99F', alpha=0.3, label=r'$ Lift \ (F_g  \ <  \ F\ lift) $')
+plt.fill_between(x_phase1, y_phase1, color='#98D8AA', alpha=0.9, label=r'$ Sediment (F_g > F\ lift)$')
+plt.xlabel(r'$Ratio  \ of \ d/w $')
+plt.ylabel(r'$Flow \ Velocity \ (m^{3}/s)$' )
 plt.title('Transition Phase Diagram')
-plt.legend()
+
+# Place legends on the right side
+plt.legend(loc='upper right', bbox_to_anchor=(1, 1))
+#plt.legend()
+plt.grid(True)
+
+# Remove the thin borders near the axis
+plt.gca().spines['top'].set_visible(False)
+plt.gca().spines['right'].set_visible(False)
+
+ax.spines[['right', 'top']].set_visible(False)  
+#ax.grid(which='minor', color='#a8a8a8', linestyle=':')
+ax.grid(which='major', color='#7a7a7a', linestyle='--')
+ax.xaxis.set_minor_locator(AutoMinorLocator(5))
+ax.yaxis.set_minor_locator(AutoMinorLocator(5))
+
+# Adjust the visible range of the plot
+plt.xlim(0, max(x_base_range))
+plt.ylim(0, max(y_base_range))
+plt.savefig('Transition Phase Diagram.png', dpi=400, bbox_inches="tight", pad_inches=0.2)
 plt.show()
 
 #########
