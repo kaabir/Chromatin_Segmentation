@@ -2,7 +2,7 @@
 """
 Created on Thu Jun  1 13:26:30 2023
 
-@author: kaabi
+@author: kaabir
 """
 
 import numpy as np
@@ -60,15 +60,15 @@ import numpy as np
 from matplotlib.ticker import (AutoMinorLocator, MultipleLocator)
 
 # Data points for phase 1 (intersecting forces)
-y_phase1 = np.array([7.961211776256691e-12, 6.579813183257682e-12, 5.852041130083344e-12,
+y_phase1 = np.array([1.0904065715365985e-11,7.961211776256691e-12, 6.579813183257682e-12, 5.852041130083344e-12,
                    5.484782218167517e-12, 5.244229884635557e-12, 5.11731509027492e-12,
                    5.0090269779292335e-12, 4.871276850953692e-12, 4.759999786105732e-12,
                    4.636811579419479e-12, 4.553836439162763e-12, 4.490225281887017e-12,
                    4.473323101008935e-12, 4.563046835361546e-12, 4.756943888324993e-12,
-                   5.2617654250817256e-12, 6.5596210951035404e-12, 7.20083299835201e-12])  # Critical flow rates
+                   5.2617654250817256e-12, 6.5596210951035404e-12,7.289681258817985e-10])  # Critical flow rates
 #x_phase1 = np.linspace(min(y_phase1), max(y_phase1), len(y_phase1))  # Corresponding x-values
 # 0.1*d_p,0.05*d_p,0.95*d_p
-x_phase1 = np.linspace(0.1, 0.925, 18)
+x_phase1 = np.linspace(0.05, 0.95, 19)
 # 0.0025, 0.0225
 
 # Base range for the phase diagram
@@ -86,7 +86,7 @@ plt.ylabel(r'$Flow \ Velocity \ (m^{3}/s)$' )
 plt.title('Transition Phase Diagram')
 
 # Place legends on the right side
-plt.legend(loc='upper right', bbox_to_anchor=(1, 1))
+plt.legend(loc='upper right', bbox_to_anchor=(1.45, 1))
 #plt.legend()
 plt.grid(True)
 
