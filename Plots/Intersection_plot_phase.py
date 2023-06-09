@@ -83,3 +83,60 @@ plt.ylabel('Flow velocity (m3/s)')
 plt.title('Transition Phase Diagram')
 plt.legend()
 plt.show()
+
+#########
+import numpy as np
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import PolynomialFeatures
+
+# Given data
+y_known = np.array([7.961211776256691e-12, 6.579813183257682e-12, 5.852041130083344e-12,
+                   5.484782218167517e-12, 5.244229884635557e-12, 5.11731509027492e-12,
+                   5.0090269779292335e-12, 4.871276850953692e-12, 4.759999786105732e-12,
+                   4.636811579419479e-12, 4.553836439162763e-12, 4.490225281887017e-12,
+                   4.473323101008935e-12, 4.563046835361546e-12, 4.756943888324993e-12,
+                   5.2617654250817256e-12, 6.5596210951035404e-12])  # Known y-values
+x_known = np.linspace(0.1, 0.90, 17)  # Known x-values
+
+# Reshape the data to 2D arrays
+x_known = x_known.reshape(-1, 1)
+y_known = y_known.reshape(-1, 1)
+
+# Create PolynomialFeatures object
+poly_features = PolynomialFeatures(degree=2)
+
+# Transform the input features to include polynomial terms
+x_poly = poly_features.fit_transform(x_known)
+
+# Fit the linear regression model
+model = LinearRegression()
+model.fit(x_poly, y_known)
+
+# Generate a sequence of x values for prediction
+x_pred = np.linspace(0.0, 1.0, 100).reshape(-1, 1)
+
+# Transform the prediction features to include polynomial terms
+x_pred_poly = poly_features.transform(x_pred)
+
+# Make predictions using the fitted model
+y_pred = model.predict(x_pred_poly)
+
+# Get the statistical values
+r_sq = model.score(x_poly, y_known)
+intercept = model.intercept_
+coefficients = model.coef_
+
+print("R-squared: ", r_sq)
+print("Intercept: ", intercept)
+print("Coefficients: ", coefficients)
+
+# Plot the known data points and the predicted curve
+import matplotlib.pyplot as plt
+
+plt.scatter(x_known, y_known, color='red', label='Known Data')
+plt.plot(x_pred, y_pred, color='blue', label='Polynomial Regression')
+plt.xlabel('x')
+plt.ylabel('y')
+plt.title('Polynomial Regression')
+plt.legend()
+plt.show()
