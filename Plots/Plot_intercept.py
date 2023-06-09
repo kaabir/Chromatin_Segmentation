@@ -158,3 +158,66 @@ F_lift = np.array([0, 3.689799909895379E-14, 7.30265454987984E-14, 1.08385631788
 F_grav = np.repeat(1.0424897937405988E-11, 5)
 
 plot_intersections('43um_38um_vesicle',F_lift, F_grav, tol=1e-15)
+
+# Curve fitting
+import numpy as np
+from scipy.interpolate import interp1d
+from scipy.optimize import curve_fit
+import matplotlib.pyplot as plt
+from matplotlib.ticker import AutoMinorLocator
+
+def linear_func(x, a, b): # fg = ax or b =ax
+    return a * x + b
+
+def plot_intersections(filename, f_lift_values, f_grav_values, tol=None):
+
+    velocity_values = [0, 2.5E-12, 5.0E-12, 7.5E-12, 1.0E-11]
+    velocity = np.array(velocity_values)
+
+    idx_inter = np.argwhere(np.abs(f_lift_values - f_grav_values) < tol).flatten()
+
+    if len(idx_inter) == 0:
+        # No intersection points found within the given data
+        if len(f_grav_values) > 0:
+            # Fit a line to the data and extrapolate to predict the intersection
+            popt, _ = curve_fit(linear_func, f_lift_values, velocity)
+            x_inter = linear_func(f_grav_values[0], *popt)
+            print('For ' + filename + ':', x_inter)
+        else:
+            print('No intersection points found for ' + filename)
+            return
+    else:
+        # Intersection point found within the given data
+        x_inter = np.interp(f_grav_values[idx_inter], f_lift_values, velocity)
+        print('For ' + filename + ':', x_inter[0])
+
+    interp_func = interp1d(f_lift_values, velocity)
+    y_inter = interp_func(f_grav_values[idx_inter[0]]) if len(idx_inter) > 0 else None
+
+    fig, ax = plt.subplots(figsize=(6, 4))
+
+    ax.plot(velocity, f_grav_values, marker='o', alpha=0.8, color="#11aa00", mec='none', ms=3, lw=1, label='F_Gravity')
+    ax.plot(velocity, f_lift_values, marker='o', alpha=0.4, color="#11aa00",mec='none', ms=3, lw=1, label='F_Lift')
+    if y_inter is not None:
+        ax.plot(y_inter, f_grav_values[idx_inter[0]], marker='o', color="#fc033d",mec='none', label='Intersection')
+    ax.set_title('Vesicle Simulation Result ' + filename)
+
+    ax.set_ylabel(r'$Force\ (Gravity\ - Lift)\ [N] $')
+    ax.set_xlabel(r'$Flow\ rate\ [m^{3}/s]$')
+
+    plt.gca().spines['top'].set_visible(False)
+    plt.gca().spines['right'].set_visible(False)
+    plt.legend()
+    ax.spines[['right', 'top']].set_visible(False)  
+    ax.grid(which='minor', color='#dbdbdb', linestyle=':')
+    ax.grid(which='major', color='#c2c0c0', linestyle='--')
+    ax.xaxis.set_minor_locator(AutoMinorLocator(5))
+    ax.yaxis.set_minor_locator(AutoMinorLocator(5))
+
+    plt.show()
+
+# Values of 43um trap - 38um vesicle
+F_lift = np.array([0, 3.689799909895379E-14, 7.30265454987984E-14, 1.0838563178899489E-13, 1.4297541514406575E-13])
+F_grav = np.repeat(1.0424897937405988E-11, 5)
+
+plot_intersections('43um_38um_vesicle', F_lift, F_grav, tol=1e-14)
