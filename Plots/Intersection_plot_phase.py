@@ -71,6 +71,16 @@ y_phase1 = np.array([1.0904065715365985e-11,7.961211776256691e-12, 6.57981318325
 x_phase1 = np.linspace(0.05, 0.95, 19)
 # 0.0025, 0.0225
 
+#Filling points are from 0.1 till 0.9 i.e 4um to 36um
+y_fill_sediment = np.array([7.961211776256691e-12, 6.579813183257682e-12, 5.852041130083344e-12,
+                   5.484782218167517e-12, 5.244229884635557e-12, 5.11731509027492e-12,
+                   5.0090269779292335e-12, 4.871276850953692e-12, 4.759999786105732e-12,
+                   4.636811579419479e-12, 4.553836439162763e-12, 4.490225281887017e-12,
+                   4.473323101008935e-12, 4.563046835361546e-12, 4.756943888324993e-12,
+                   5.2617654250817256e-12, 6.5596210951035404e-12])
+
+x_fill_sediment = np.linspace(0.1, 0.90, 17)
+
 # Base range for the phase diagram
 x_base_range = np.linspace(0, 1, 100)
 y_base_range = np.linspace(1.0E-11, 1.0E-11, 100)
@@ -78,9 +88,9 @@ y_base_range = np.linspace(1.0E-11, 1.0E-11, 100)
 fig, ax = plt.subplots(figsize=(6, 6))
 
 # Plotting the phase diagram
-plt.plot(x_phase1, y_phase1, color='#FF6D60', marker='+', label='')
-plt.fill_between(x_base_range, y_base_range, color='#F3E99F', alpha=0.3, label=r'$ Lift \ (F_g  \ <  \ F\ lift) $')
-plt.fill_between(x_phase1, y_phase1, color='#98D8AA', alpha=0.9, label=r'$ Sediment (F_g > F\ lift)$')
+plt.plot(x_phase1, y_phase1, color='#FF6D60', marker='o', label='')
+plt.fill_between(x_base_range, y_base_range, color='#F3E99F', alpha=0.3, label=r'$ Lift \ (F_g  \ <  \ F_{lift}) $')
+plt.fill_between(x_fill_sediment, y_fill_sediment, color='#98D8AA', alpha=0.9, label=r'$ Sediment \ (F_g > F_{lift} )$')
 plt.xlabel(r'$Ratio  \ of \ d/w $')
 plt.ylabel(r'$Flow \ Velocity \ (m^{3}/s)$' )
 plt.title('Transition Phase Diagram')
@@ -103,8 +113,7 @@ ax.yaxis.set_minor_locator(AutoMinorLocator(5))
 # Adjust the visible range of the plot
 plt.xlim(0, max(x_base_range))
 plt.ylim(0, max(y_base_range))
-plt.savefig('Transition Phase Diagram.png', dpi=400, bbox_inches="tight", pad_inches=0.2)
-plt.show()
+plt.savefig('Transition Phase Diagram.png', dpi=500, bbox_inches="tight", pad_inches=0.2)
 
 #########
 import numpy as np
