@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Jun  7 18:22:51 2023
+
+@author: kaabir
+"""
 import numpy as np
 from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
@@ -50,6 +56,8 @@ def plot_intersections(filename,f_lift_values, f_grav_values, tol=None):
     plt.show()
     ##print(f'Intersection point on (velocity,Force): ({x_inter[0]}, {F_grav[idx_inter][0]})')
     #print(f'Intersection point on y-axis: ({y_inter}, {F_grav[idx_inter][0]})')
+
+
 
 # Values of 43um trap - 4um vesicle
 F_lift = np.array([0,3.818327355512234E-15,7.636565334253353E-15,1.1454714163530053E-14,1.527277407339555E-14])
@@ -153,13 +161,19 @@ F_grav = np.repeat(8.863975035858245E-12, 4)
 
 plot_intersections('43um_36um_vesicle',F_lift, F_grav, tol=1e-11)
 
-# Values of 43um trap - 38um vesicle
-F_lift = np.array([0, 3.689799909895379E-14, 7.30265454987984E-14, 1.0838563178899489E-13, 1.4297541514406575E-13])
-F_grav = np.repeat(1.0424897937405988E-11, 5)
+# Values of 43um trap - 37um vesicle
+F_lift = np.array([0,3.208102210127635E-12,6.415499358113973E-12,9.622195795803819E-12])
+F_grav = np.repeat(9.238460692420234E-12, 4)
 
-plot_intersections('43um_38um_vesicle',F_lift, F_grav, tol=1e-15)
+plot_intersections('43um_37um_vesicle',F_lift, F_grav, tol=1e-12)
 
-# Curve fitting
+# # Values of 43um trap - 38um vesicle
+# F_lift = np.array([0, 3.689799909895379E-14, 7.30265454987984E-14, 1.0838563178899489E-13, 1.4297541514406575E-13])
+# F_grav = np.repeat(1.0424897937405988E-11, 5)
+
+# plot_intersections('43um_38um_vesicle',F_lift, F_grav, tol=1e-15)
+
+
 import numpy as np
 from scipy.interpolate import interp1d
 from scipy.optimize import curve_fit
@@ -215,9 +229,15 @@ def plot_intersections(filename, f_lift_values, f_grav_values, tol=None):
     ax.yaxis.set_minor_locator(AutoMinorLocator(5))
 
     plt.show()
-
+    
 # Values of 43um trap - 38um vesicle
 F_lift = np.array([0, 3.689799909895379E-14, 7.30265454987984E-14, 1.0838563178899489E-13, 1.4297541514406575E-13])
 F_grav = np.repeat(1.0424897937405988E-11, 5)
 
 plot_intersections('43um_38um_vesicle', F_lift, F_grav, tol=1e-14)
+    
+# Values of 43um trap - 2um vesicle
+F_lift = np.array([0,3.484833012220831E-16, 6.96954359960884E-16, 1.0454131452630244E-15, 1.3938596260826085E-15])
+F_grav = np.repeat(1.519885980085433E-15, 5)
+
+plot_intersections('43um_2um_vesicle', F_lift, F_grav, tol=1e-16)
