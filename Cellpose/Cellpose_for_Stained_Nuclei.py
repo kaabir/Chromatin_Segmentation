@@ -59,10 +59,6 @@ def trim_array(arr, mask):
     for indexes in np.where(mask))
     return arr[bounding_box]
 
-def connected_components_labeling_box(binary_input):
-    labeled_array, num_labels = label(binary_input)
-    return labeled_array
-
 def analyze_actin(mask, img_actin, filename, i):
     act_obj = np.zeros(img_nuclei.shape)
     dilated = ndi.binary_dilation(mask, diamond, iterations=10).astype(mask.dtype)
@@ -85,7 +81,7 @@ def analyze_actin(mask, img_actin, filename, i):
     
     # Write statistics to Excel file
     statistics_df = pd.DataFrame(statistics_surf_actin)
-    statistics_df.to_excel(Result_folder + '(Actin)Actin_statistics_' + filename + '_' + str(i) + '.xlsx')
+    statistics_df.to_excel(Result_folder + '(Actin)_' + filename + '_' + str(i) + '.xlsx')
     
 
 def calculate_surface_area(mask, threshold=None):
@@ -108,7 +104,7 @@ def folder_scan(directory):
     return get_files
 
 
-folder_path = 'C:/Users/kaabi/Documents/Nuceli_Data/Enucleation/230507 OF1 D0 Actin 10uMVCA Gactin RYH2AX FRLaminB1/Actin/'
+folder_path = 'C:/Users/kaabi/Documents/Nuceli_Data/Enucleation/230507 OF1 D0 Actin 10uMVCA Gactin RYH2AX FRLaminB1/Actin'
 
 get_files = folder_scan(folder_path)
 
@@ -116,6 +112,7 @@ get_files = folder_scan(folder_path)
 px_to_um_X = 0.0351435
 px_to_um_Y = 0.0351435
 px_to_um_Z = 0.32 #1.0/0.0351435 # making pixels isotropic
+
 
 for image in get_files:
 
@@ -182,14 +179,21 @@ for image in get_files:
                                     )
 
     # Merge Segmented Mask
+    from scipy.ndimage import label
+    
+    def connected_components_labeling_box(binary_input):
+        labeled_array, num_labels = label(binary_input)
+        return labeled_array
+
+    merged_Labels = connected_components_labeling_box(mask)
 
     #merged_Labels = cle.connected_components_labeling_box(mask)
-    merged_Labels = connected_components_labeling_box(mask)
     merged_Labels_np = np.array(merged_Labels).astype('int32')
-
-    prediction_stack_32 = img_as_float32(mask, force_copy=False)     
-    os.chdir(Result_folder)
-    imwrite(filename+".tif", prediction_stack_32)
+    print('The Filename ---', filename)
+    ### Save the Mask
+    #prediction_stack_32 = img_as_float32(mask, force_copy=False)     
+    #os.chdir(Result_folder)
+    #imwrite(filename+".tif", prediction_stack_32)
     #merged_Labels_np = split_touching_objects(merged_Labels_np)
 
     # Structure  for Actin Dilation
@@ -225,32 +229,57 @@ for image in get_files:
         
             nuclei_Area = statistics_nucleus.iloc[0, 26]
 
-            pd.DataFrame(statistics_nucleus).to_excel(Result_folder+filename+'_'+ str(i)+'_(Nucleus)Nucleus_statistics.xlsx')
+            pd.DataFrame(statistics_nucleus).to_excel(Result_folder+'(Nucleus)_' + filename+'_'+ str(i)+'.xlsx')
         
             nuclei_Area = nuclei_Area*px_to_um_X*px_to_um_Y*px_to_um_Z
             print('nuclei_Area ---', nuclei_Area)
-            # Chromocenter Segmentation
+            # # Chromocenter Segmentation
 
-            intensity_map_norm = normalize_intensity(intensity_nucelus)
+            # intensity_map_norm = normalize_intensity(intensity_nucelus)
     
-            intensity_map_blur = nsitk.median_filter(intensity_map_norm, radius_x=2, radius_y=2, radius_z=0)
-            intensity_map_thb = cle.top_hat_box(intensity_map_blur, None, 10.0, 10.0, 0.0)
-            intermodes_Threshold_Chromo = nsitk.threshold_intermodes(intensity_map_thb)
+            # intensity_map_blur = nsitk.median_filter(intensity_map_norm, radius_x=2, radius_y=2, radius_z=0)
+            # intensity_map_thb = cle.top_hat_box(intensity_map_blur, None, 10.0, 10.0, 0.0)
+            # intermodes_Threshold_Chromo = nsitk.threshold_intermodes(intensity_map_thb)
 
-            statistics_intermodes_chromo = nsitk.label_statistics(intensity_image=img_nuclei, label_image=intermodes_Threshold_Chromo,
-                                                size = True, intensity = True, perimeter= True,
-                                                shape= True, position= True)#, moments= True)
+            # statistics_intermodes_chromo = nsitk.label_statistics(intensity_image=img_nuclei, label_image=intermodes_Threshold_Chromo,
+            #                                     size = True, intensity = True, perimeter= True,
+            #                                     shape= True, position= True)#, moments= True)
             
-            pd.DataFrame(statistics_intermodes_chromo).to_excel(Result_folder+'(Chromo)Chromo_statistics_'+filename+'_'+ str(i) +'.xlsx') 
+            # pd.DataFrame(statistics_intermodes_chromo).to_excel(Result_folder+'(Chromo)Chromo_statistics_'+filename+'_'+ str(i) +'.xlsx') 
             
-            intermodes_chromo_Area = statistics_intermodes_chromo.iloc[0, 26]
+            # intermodes_chromo_Area = statistics_intermodes_chromo.iloc[0, 26]
             
-            chromointermodes_Area = intermodes_chromo_Area *px_to_um_X* px_to_um_Y*px_to_um_Z
-            print('chromointermodes_Area ---', chromointermodes_Area)
-
-            # Dilating mask for actin to be applied for others
+            # chromointermodes_Area = intermodes_chromo_Area *px_to_um_X* px_to_um_Y*px_to_um_Z
+            # print('Chromointermodes_Area ---', chromointermodes_Area)
+            # Actin Segmentation
+            if 'img_actin' in globals(): #or 'img_actin' in globals():
+                # Separate Ctrl
+                pass
+           
             act_obj = np.zeros(img_nuclei.shape)
             dilated = ndi.binary_dilation(mask, diamond, iterations=10).astype(mask.dtype)
+            actin_img = replace_intensity(dilated, img_actin)
+            actin_filter = nsitk.median_filter(actin_img, radius_x=2, radius_y=2, radius_z=0)
+            actin_binary = nsitk.threshold_otsu(actin_filter)
+
+            act_obj = np.zeros(img_nuclei.shape)
+
+            # Apply thinning function to each slice of the actin binary image
+            for i in range(actin_binary.shape[0]):
+                    thinned_slice = thin(actin_binary[i])
+                    act_obj[i] = thinned_slice
+            
+            statistics_actin = nsitk.label_statistics(intensity_image=actin_img, label_image=act_obj,
+                                                size = True, intensity = True, perimeter= True,
+                                                shape= True, position= True)#, moments= True)
+
+            #actin_surf_Area = np.sum(statistics_surf_actin['area'], axis=0)
+            actin_surf_Area = statistics_actin.iloc[0, 26]
+            actin_surf_Area = actin_surf_Area * px_to_um_X
+            #print('Actin_surf_Area ---', actin_surf_Area) 
+            # Write statistics to Excel file
+            #statistics_df = pd.DataFrame(statistics_surf_actin)
+            #statistics_df.to_excel(Result_folder + '(Actin)Actin_statistics_' + filename + '_' + str(i) + '.xlsx')   
             
             # YH2AX Segmentation
 
@@ -259,7 +288,7 @@ for image in get_files:
                                                 shape= True, position= True)#, moments= True)
             
             
-            statistics_yh2ax.to_excel(Result_folder + '(YH2AX)YH2AX_statistics_' + filename + '_' + str(i) + '.xlsx')   
+            statistics_yh2ax.to_excel(Result_folder + '(YH2AX)_' + filename + '_' + str(i) + '.xlsx')   
             yh2ax_Intensity = statistics_yh2ax.iloc[0, 2]
             print('YH2AX_Area ---', yh2ax_Intensity)
             
@@ -268,36 +297,8 @@ for image in get_files:
             statistics_laminb1 = nsitk.label_statistics(intensity_image=img_laminb1, label_image=dilated,
                                     size = True, intensity = True, perimeter= True,
                                     shape= True, position= True)#, moments= True)
-            statistics_laminb1.to_excel(Result_folder + '(LaminB1)LaminB1_statistics_' + filename + '_' + str(i) + '.xlsx')   
+            statistics_laminb1.to_excel(Result_folder + '(LaminB1)_' + filename + '_' + str(i) + '.xlsx')   
             
 
             laminb1_Intensity = statistics_laminb1.iloc[0, 2]
             print('LaminB1_Area ---', laminb1_Intensity)
-            # Actin Segmentation
-            if 'img_actin' in globals(): #or 'img_actin' in globals():
-                # Separate Ctrl
-                pass
-           
-                actin_img = replace_intensity(dilated, img_actin)
-                actin_filter = nsitk.median_filter(actin_img, radius_x=2, radius_y=2, radius_z=0)
-                actin_binary = nsitk.threshold_otsu(actin_filter)
-
-                act_obj = np.zeros(img_nuclei.shape)
-
-                # Apply thinning function to each slice of the actin binary image
-                for i in range(actin_binary.shape[0]):
-                        thinned_slice = thin(actin_binary[i])
-                        act_obj[i] = thinned_slice
-            
-                statistics_actin = nsitk.label_statistics(intensity_image=actin_img, label_image=act_obj,
-                                                size = True, intensity = True, perimeter= True,
-                                                shape= True, position= True)#, moments= True)
-
-                #actin_surf_Area = np.sum(statistics_surf_actin['area'], axis=0)
-                actin_surf_Area = statistics_actin.iloc[0, 26]
-                actin_surf_Area = actin_surf_Area * px_to_um_X
-                #print('Actin_surf_Area ---', actin_surf_Area) 
-                # Write statistics to Excel file
-                #statistics_df = pd.DataFrame(statistics_surf_actin)
-                #statistics_df.to_excel(Result_folder + '(Actin)Actin_statistics_' + filename + '_' + str(i) + '.xlsx')   
-            
