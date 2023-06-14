@@ -55,44 +55,112 @@ plt.show()
 
 #####################
 
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Jun 12 09:37:13 2023
+
+@author: Kaabir
+
+1. Flow rate is converted to flow velocity by dividing the cross section 
+area by the intermediate layer that connects to the wells
+
+2. The extreme ends of the plot is where Lift force is intercepting far from the simulated 
+flow rate are excluded from Sediment regions
+
+3. The graph is plotted for daimeter of well - 43um default then 55um, 70um and 91.5um
+Actually >70um is difficult to represent in the same graph
+
+"""
+
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import (AutoMinorLocator, MultipleLocator)
 
 # Data points for phase 1 (intersecting forces)
-y_phase1 = np.array([1.0904065715365985e-11,7.961211776256691e-12, 6.579813183257682e-12, 5.852041130083344e-12,
+## 43um well
+y_phase_val_43 = np.array([1.0904065715365985e-11,7.961211776256691e-12, 6.579813183257682e-12, 5.852041130083344e-12,
                    5.484782218167517e-12, 5.244229884635557e-12, 5.11731509027492e-12,
                    5.0090269779292335e-12, 4.871276850953692e-12, 4.759999786105732e-12,
                    4.636811579419479e-12, 4.553836439162763e-12, 4.490225281887017e-12,
                    4.473323101008935e-12, 4.563046835361546e-12, 4.756943888324993e-12,
-                   5.2617654250817256e-12, 6.5596210951035404e-12,7.289681258817985e-10])  # Critical flow rates
+                   5.2617654250817256e-12, 6.5596210951035404e-12])  # Critical flow rates
+
+with np.printoptions(precision=18):
+    y_phase_43 = np.multiply(y_phase_val_43,1e+18) # m to um conversion
+    y_phase_43 = np.divide(y_phase_43,13890) # cross section area 300*46.3
+    
 #x_phase1 = np.linspace(min(y_phase1), max(y_phase1), len(y_phase1))  # Corresponding x-values
 # 0.1*d_p,0.05*d_p,0.95*d_p
-x_phase1 = np.linspace(0.05, 0.95, 19)
+x_phase43 = np.linspace(0.05, 0.95, 18)    
+
+## 50um well
+y_phase_val_50 = np.array([2.3974129833890082e-11,1.8457016221285147e-11,1.580104307448339e-11,1.4322859702398651e-11,
+                           1.3213177488803221e-11,1.2497676786841492e-11,1.1735126653383476e-11,1.1119979222314083e-11,
+                           1.0343372524155945e-11,9.746111293026835e-12,9.05882523891098e-12,8.476189525565274e-12,
+                           7.965848990423126e-12,7.553598136178166e-12,7.2506509547708726e-12,7.182628811161164e-12,
+                           7.740686997891078e-12])  # Critical flow rates
+
+with np.printoptions(precision=18):
+    y_phase_50 = np.multiply(y_phase_val_50,1e+18) # m to um conversion
+    y_phase_50 = np.divide(y_phase_50,13890) # cross section area 300*46.3
+
+x_phase50 = np.linspace(0.1, 0.9, 17)
+
+## 70um well
+y_phase_val_70 = np.array([2.2977536136354447e-09,1.0447833546021277e-09,6.916636809467948e-10,5.01023405055832e-10,
+                           3.7131232342670273e-10,2.884966941614419e-10,2.2905050944275414e-10,1.7986035734834205e-10,
+                           1.457862249119165e-10,1.1987328015436576e-10,9.808994057320384e-11,8.278784147730222e-11,
+                           7.155493712406736e-11,6.73136658865651e-11,2.001558664806889e-08])  # Critical flow rates
+
+with np.printoptions(precision=18):
+    y_phase_70 = np.multiply(y_phase_val_70,1e+18) # m to um conversion
+    y_phase_70 = np.divide(y_phase_70,13890) # cross section area 300*46.3
+    
+x_phase70 = np.linspace(0.25, 0.95, 15)
+
+
+
 # 0.0025, 0.0225
 
-#Filling points are from 0.1 till 0.9 i.e 4um to 36um
-y_fill_sediment = np.array([7.961211776256691e-12, 6.579813183257682e-12, 5.852041130083344e-12,
+# Fill regions to distinguish Sedimentation and Lift regimes
+#Filling points are from 0.1 till 0.9 i.e 4um to 36um 
+## 43um well
+y_fill_sediment1 = np.array([7.961211776256691e-12, 6.579813183257682e-12, 5.852041130083344e-12,
                    5.484782218167517e-12, 5.244229884635557e-12, 5.11731509027492e-12,
                    5.0090269779292335e-12, 4.871276850953692e-12, 4.759999786105732e-12,
                    4.636811579419479e-12, 4.553836439162763e-12, 4.490225281887017e-12,
                    4.473323101008935e-12, 4.563046835361546e-12, 4.756943888324993e-12,
                    5.2617654250817256e-12, 6.5596210951035404e-12])
 
+
+#y_fill_sediment = np.divide(y_fill_sediment,1389)
+
+with np.printoptions(precision=18):
+    y_fill_sediment = np.multiply(y_fill_sediment1,1e+18) # m to um conversion
+    y_fill_sediment = np.divide(y_fill_sediment,13890)
+
 x_fill_sediment = np.linspace(0.1, 0.90, 17)
 
 # Base range for the phase diagram
 x_base_range = np.linspace(0, 1, 100)
-y_base_range = np.linspace(1.0E-11, 1.0E-11, 100)
+y_base_range = np.linspace(min(y_phase_43), 1000, 100)
 
+# Plotting 
 fig, ax = plt.subplots(figsize=(6, 6))
 
 # Plotting the phase diagram
-plt.plot(x_phase1, y_phase1, color='#FF6D60', marker='o', label='')
+# 43um
+plt.plot(x_phase43, y_phase_43, color='#FF6D60', marker='o', label=r'$43 \mu m \ well $')
+# 50um
+plt.plot(x_phase50, y_phase_50, color='#c260ff', marker='v', label=r'$50 \mu m \ well $')
+
+# 70um
+plt.plot(x_phase70, y_phase_70, color='#ff6085', marker='*', label=r'$70 \mu m \ well $')
+
 plt.fill_between(x_base_range, y_base_range, color='#F3E99F', alpha=0.3, label=r'$ Lift \ (F_g  \ <  \ F_{lift}) $')
 plt.fill_between(x_fill_sediment, y_fill_sediment, color='#98D8AA', alpha=0.9, label=r'$ Sediment \ (F_g > F_{lift} )$')
 plt.xlabel(r'$Ratio  \ of \ d/w $')
-plt.ylabel(r'$Flow \ Velocity \ (m^{3}/s)$' )
+plt.ylabel(r'$Flow \ Velocity \ (\mu m/s)$' )
 plt.title('Transition Phase Diagram')
 
 # Place legends on the right side
@@ -112,8 +180,9 @@ ax.yaxis.set_minor_locator(AutoMinorLocator(5))
 
 # Adjust the visible range of the plot
 plt.xlim(0, max(x_base_range))
-plt.ylim(0, max(y_base_range))
-plt.savefig('Transition Phase Diagram.png', dpi=500, bbox_inches="tight", pad_inches=0.2)
+plt.ylim(250, max(y_base_range))
+#plt.savefig('Transition Phase Diagram.png', dpi=500, bbox_inches="tight", pad_inches=0.2)
+plt.show()
 
 #########
 import numpy as np
