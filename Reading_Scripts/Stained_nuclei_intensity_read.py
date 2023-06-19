@@ -13,29 +13,29 @@ import numpy as np
 Output
 ├── Ctrl
 │   ├── T0
-│   │   ├── Nuclei├── Volume/Sphericity/
-│   │   └── Chromo└── Count/Volume/
-│   ├── T15...
-│   └── T30...
+│      ├── Nuclei├── Volume/Sphericity/
+│      └── Chromo└── Count/Volume/
+│   
+│  
 └── VCA
     ├── T0
-    │   ├── Nuclei├── Volume/Sphericity/
-    │   ├── Chromo├── Count/Volume/
-    │   └── Actin └── Area/
-    ├── T15...
-    └── T30...
+       ├── Nuclei├── Volume/Sphericity/
+       ├── Chromo├── Count/Volume/
+       └── Actin └── Area/
+
+    
+    Hoescht B H3K9me2-A568 H3k27me3-A647
+    
 """
 
-Imaris_vca = {"File_Name_VCA":[],"VCA_chromo_volume_0":[],"VCA_chromo_volume_1":[],"VCA_chromo_volume_2":[],"VCA_chromo_volume_3":[],
-           "VCA_chromo_count_0":[],"VCA_chromo_count_1":[],"VCA_chromo_count_2":[],"VCA_chromo_count_3":[],
-          "nuclei_vca_0":[],"nuclei_vca_1":[],"nuclei_vca_2":[],"nuclei_vca_3":[],
-           "actin_area_30":[],"actin_area_60":[],"sphericity_vca_0":[],"sphericity_vca_1":[],"sphericity_vca_2":[],"sphericity_vca_3":[]}
+region_Prop_ctrl = {"ctrl_intens_H3k27me3":[],"ctrl_intens_H3K9me2":[],"ctrl_intens_Hoechst":[]}
+region_Prop_actin = {"actin_intens_H3k27me3":[],"actin_intens_H3K9me2":[],"actin_intens_Hoechst":[]}
 
 
-Imaris_ctrl = {"File_Name_Ctrl":[],"Ctrl_chromo_volume_0":[],"Ctrl_chromo_volume_1":[],"Ctrl_chromo_volume_2":[],"Ctrl_chromo_volume_3":[],
-           "Ctrl_chromo_count_0":[],"Ctrl_chromo_count_1":[],"Ctrl_chromo_count_2":[],"Ctrl_chromo_count_3":[],
-           "nuclei_ctrl_0":[],"nuclei_ctrl_1":[],"nuclei_ctrl_2":[],"nuclei_ctrl_3":[],
-          "sphericity_ctrl_0":[],"sphericity_ctrl_1":[],"sphericity_ctrl_2":[],"sphericity_ctrl_3":[]}
+# Imaris_ctrl = {"File_Name_Ctrl":[],"Ctrl_chromo_volume_0":[],"Ctrl_chromo_volume_1":[],"Ctrl_chromo_volume_2":[],"Ctrl_chromo_volume_3":[],
+#            "Ctrl_chromo_count_0":[],"Ctrl_chromo_count_1":[],"Ctrl_chromo_count_2":[],"Ctrl_chromo_count_3":[],
+#            "nuclei_ctrl_0":[],"nuclei_ctrl_1":[],"nuclei_ctrl_2":[],"nuclei_ctrl_3":[],
+#           "sphericity_ctrl_0":[],"sphericity_ctrl_1":[],"sphericity_ctrl_2":[],"sphericity_ctrl_3":[]}
             
 # Type- Actin, Ctrl  && Time - T0,T15,T30,T60
 # ===========================================
@@ -47,22 +47,9 @@ def folder_scan(directory, marker):
     extension = ".xlsx"  # ".czi"
     for f_name in os.listdir(directory):
         #print(f_name)
-        if f_name.startswith(marker) and f_name.endswith(extension):
+        if f_name.find(marker) != -1 and f_name.endswith(extension):
             get_files.append(os.path.join(directory, f_name))
     return get_files
-
-directory = 'D:/Nuceli_Data/Fixed Nulcei Staining/230406 OF1 D1 Actin 10uMVCA Gactin RH3K9me2 FRH3K27me2/Result/Actin/'
-
-# H3K9me2 files
-h3K9me2_files = folder_scan(directory,'(H3K9me2)') # 
-
-for temp_h3K9me2 in h3K9me2_files:
-    df_ctrl_2 = pd.read_excel(temp_h3K9me2)
-    Imaris_vca["VCA_chromo_count_0"].append(df_ctrl_2.loc[0,'mean'])
-h3K9me2_files.clear() 
-
-# # Sorting Files
-
                         
 def actin_Coverage(Nuc_Area,Actin_Area):
            # Pd to np et divide
@@ -82,8 +69,6 @@ def actin_Coverage(Nuc_Area,Actin_Area):
     return Actin_coverage_per
     #Actin_coverage_per.clear()
     
-
-
 def get_Filename(fil_Str):
     #filename = Path(file_path).stem
     File_Name=fil_Str[50:]
@@ -93,4 +78,68 @@ def get_Filename(fil_Str):
     File_Name = File_Name.split(',') 
     File_Name = File_Name[0] #extracts the first field
     return File_Name
+
+# Ctrl
+
+folder_path = 'C:/Users/kaabi/Documents/Nuceli_Data/Fixed Nulcei Staining/230406 OF1 D1 Actin 10uMVCA Gactin RH3K9me2 FRH3K27me2/'
+
+directory = folder_path + 'Ctrl/'
+
+# H3K9me2 files
+h3K9me2_files = folder_scan(directory,"(H3K9me2)") # 
+
+for temp_h3K9me2 in h3K9me2_files:
+    df = pd.read_excel(temp_h3K9me2)
+    region_Prop_ctrl["ctrl_intens_H3K9me2"].append(df.loc[0,'mean'])
+h3K9me2_files.clear() 
+
+# H3k27me3 files
+h3k27me3_files = folder_scan(directory,"(H3K27me3)") #
+
+for temp_h3k27me3 in h3k27me3_files:
+    df = pd.read_excel(temp_h3k27me3)
+    region_Prop_ctrl["ctrl_intens_H3k27me3"].append(df.loc[0,'mean'])
+h3k27me3_files.clear() 
+
+# Hoechst files
+nuclei_Files = folder_scan(directory,"(Nucleus)Nucleus")
+
+for temp_nuclei in nuclei_Files:
+    df = pd.read_excel(temp_nuclei)
+    region_Prop_ctrl["ctrl_intens_Hoechst"].append(df.loc[0,'mean'])
+nuclei_Files.clear() 
+
+df_ctrl = pd.DataFrame.from_dict(region_Prop_ctrl, orient='index')
+df_ctrl = df_ctrl.transpose()
+pd.DataFrame(df_ctrl).to_excel(folder_path + 'Export_Ctrl_Excel.xlsx')
+
+# Actin
+directory = folder_path + 'Actin/'
+
+h3K9me2_files = folder_scan(directory,"(H3K9me2)") # 
+
+for temp_h3K9me2 in h3K9me2_files:
+    df = pd.read_excel(temp_h3K9me2)
+    region_Prop_actin["actin_intens_H3K9me2"].append(df.loc[0,'mean'])
+h3K9me2_files.clear() 
+
+# H3k27me3 files
+h3k27me3_files = folder_scan(directory,"(H3K27me3)") #
+
+for temp_h3k27me3 in h3k27me3_files:
+    df = pd.read_excel(temp_h3k27me3)
+    region_Prop_actin["actin_intens_H3k27me3"].append(df.loc[0,'mean'])
+h3k27me3_files.clear() 
+
+# Hoechst files
+nuclei_Files = folder_scan(directory,"(Nucleus)Nucleus")
+
+for temp_nuclei in nuclei_Files:
+    df = pd.read_excel(temp_nuclei)
+    region_Prop_actin["actin_intens_Hoechst"].append(df.loc[0,'mean'])
+nuclei_Files.clear() 
+
+df_actin = pd.DataFrame.from_dict(region_Prop_actin, orient='index')
+df_actin = df_actin.transpose()
+pd.DataFrame(df_actin).to_excel(folder_path + 'Export_Actin_Excel.xlsx')
 
