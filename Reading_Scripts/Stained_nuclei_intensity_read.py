@@ -50,7 +50,7 @@ def folder_scan(directory, marker):
         if f_name.find(marker) != -1 and f_name.endswith(extension):
             get_files.append(os.path.join(directory, f_name))
     return get_files
-                        
+
 def actin_Coverage(Nuc_Area,Actin_Area):
            # Pd to np et divide
     Nuclei_area_den = list(map(float, Nuc_Area))
@@ -83,6 +83,7 @@ def get_Filename(fil_Str):
 
 folder_path = 'C:/Users/kaabi/Documents/Nuceli_Data/Fixed Nulcei Staining/230406 OF1 D1 Actin 10uMVCA Gactin RH3K9me2 FRH3K27me2/'
 
+
 directory = folder_path + 'Ctrl/'
 
 # H3K9me2 files
@@ -113,8 +114,10 @@ df_ctrl = pd.DataFrame.from_dict(region_Prop_ctrl, orient='index')
 df_ctrl = df_ctrl.transpose()
 pd.DataFrame(df_ctrl).to_excel(folder_path + 'Export_Ctrl_Excel.xlsx')
 
+
 # Actin
 directory = folder_path + 'Actin/'
+
 
 h3K9me2_files = folder_scan(directory,"(H3K9me2)") # 
 
@@ -142,4 +145,3 @@ nuclei_Files.clear()
 df_actin = pd.DataFrame.from_dict(region_Prop_actin, orient='index')
 df_actin = df_actin.transpose()
 pd.DataFrame(df_actin).to_excel(folder_path + 'Export_Actin_Excel.xlsx')
-
