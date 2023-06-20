@@ -15,6 +15,7 @@ import pyclesperanto_prototype as cle
 import numpy as np
 import pandas as pd
 from aicsimageio import AICSImage
+from aicsimageio.writers import OmeTiffWriter
 import napari_simpleitk_image_processing as nsitk
 
 from pathlib import Path
@@ -28,9 +29,8 @@ device = cle.select_device("AMD Radeon Pro W6600")
 
 from scipy import ndimage as ndi
 # Structure  for Actin Dilation
-    # Structure  for Actin Dilation
-diamond = np.zeros((3, 3, 3), dtype=bool)
-diamond[1:2, 0:3, 0:3] = True
+diamond = np.zeros((20, 20), dtype=bool)
+diamond[1:19, 1:19] = True
 
 # model_type='cyto' or model_type='nuclei'
 #model = models.Cellpose(model_type='cyto', gpu = True) #nuclei model for brdu
@@ -94,9 +94,9 @@ def replace_intensity(mask, img):
     mat_intensity = np.where(np.logical_and(mask,img),img,0) # Overlap Mask on original image (as reference)
     return mat_intensity
 
-#folder_path = 'C:/Users/kaabi/Documents/Nuceli_Data/Enucleation/Cellpose/H3K_Staining/'
+folder_path = 'C:/Users/kaabi/Documents/Nuceli_Data/Enucleation/Cellpose/H3K_Staining/'
 
-#get_files = folder_scan(folder_path)
+get_files = folder_scan(folder_path)
 
 # Conversion to um
 px_to_um_X = 0.0351435
@@ -123,16 +123,16 @@ else:
         img_foxj = aics_image.get_image_data("ZYX", T=0, C=2) # LaminB1
         img_nuclei = aics_image.get_image_data("ZYX", T=0, C=3) # Nucleus
 
-# img_nuclei = np.max(img_nuclei, axis=0)
+img_nuclei = np.max(img_nuclei, axis=0)
 
-# if 'img_fop' in globals():
-#     img_fop = np.max(img_fop, axis=0)
+if 'img_fop' in globals():
+    img_fop = np.max(img_fop, axis=0)
 
-# if 'img_h3k27me3' in globals():
-#     img_h3k27me3 = np.max(img_h3k27me3, axis=0)
+if 'img_h3k27me3' in globals():
+    img_h3k27me3 = np.max(img_h3k27me3, axis=0)
     
-# if 'img_foxj' in globals():
-#     img_foxj = np.max(img_foxj, axis=0)   
+if 'img_foxj' in globals():
+    img_foxj = np.max(img_foxj, axis=0)   
 
 if not os.path.exists(folder_path + '/Result'):
         os.makedirs(folder_path + '/Result')
@@ -166,32 +166,30 @@ diameter = 90 #169.708
 use_GPU = True
 cellprob_threshold = 0
 
-stitch_threshold = 1
+stitch_threshold = 0
 
-model_match_threshold = 25#30
+model_match_threshold = 27#30
 flow_threshold = (31.0 - model_match_threshold) / 10.0
 
-print('cyto2 begins')
-
-pretrained_model = "C:/Users/kaabi/Documents/Nuceli_Data/Enucleation/Cellpose/models_trained_Nuclei/CP_20230306_150448_200"
+print('Segmentation begins')
 
 logger = io.logger_setup()
 
+pretrained_model = "C:/Users/kaabi/Documents/Nuceli_Data/Enucleation/Cellpose/19_06_23 Compression_bulk_Nuclei/Done/models/CP_LC3_Bulk_nuclei_Main"
+
 model = models.CellposeModel(gpu=use_GPU, model_type=pretrained_model)#,residual_on=False, style_on=False, concatenation=False)#, resample=True, do_3D=True,stitch_threshold=1)
-mask, flows,styles = model.eval(img_nuclei,
+mask, flows, styles = model.eval(img_nuclei, 
                                 channels =channels,
                                 #anisotropy=anisotropy,
                                 diameter=diameter, 
-                                #pretrained_model=pretrained_model,
+                                pretrained_model=pretrained_model,
                                 do_3D=False,
                                 resample=True,
-                                min_size = 10,
+                                min_size = 10, #-1
                                 flow_threshold =flow_threshold,
                                 cellprob_threshold = cellprob_threshold,
                                 net_avg=True,
-                                stitch_threshold=stitch_threshold,
-                                #model_match_threshold = model_match_threshold
-                                    )
+                                stitch_threshold=stitch_threshold,)
 
 #mask_np1 = nsitk.morphological_watershed(mask)
 #mask_np = np.array(mask)
@@ -236,7 +234,7 @@ labels = measure.label(clean_mask)
 for i, label in enumerate(np.unique(labels)[1:]):
     print('i ---', i)
         #print('label ---', label)
-    if label == 15:
+    if label == 5:
         print('label ---', label)
             # create a mask for the current label
             #if (len(np.unique(merged_Labels)-1) == 1):# and no_chnls>1:
@@ -247,7 +245,7 @@ for i, label in enumerate(np.unique(labels)[1:]):
 
         
         # Dilation of unqiue label
-        dilated_mask = ndi.binary_dilation(mask_unique, structure = diamond, iterations=20).astype(mask_unique.dtype)
+        dilated_mask = ndi.binary_dilation(mask_unique, structure = diamond, iterations=2).astype(mask_unique.dtype)
         # FoxJ Channel
         intensity_foxj = replace_intensity(dilated_mask, img_foxj)
         foxj_arr = trim_array(intensity_foxj)
@@ -264,11 +262,7 @@ for i, label in enumerate(np.unique(labels)[1:]):
         intensity_map_norm = normalize_intensity(normal_nucelus)
         intensity_map_blur = nsitk.median_filter(intensity_map_norm, radius_x=2, radius_y=2, radius_z=0)
         intensity_map_thb = cle.top_hat_box(intensity_map_blur, None, 10.0, 10.0, 0.0)
-        
-        try:
-            intermodes_Threshold_Chromo = nsitk.threshold_intermodes(intensity_map_thb)
-        except RuntimeError:
-            print("Oops!  There was a trciky image to segment....")
+        intermodes_Threshold_Chromo = nsitk.threshold_intermodes(intensity_map_thb)
         # Threshold isodata
         # image2_T = nsitk.threshold_isodata(image1_gb)
         # image3_T = nsitk.threshold_maximum_entropy(image1_gb)
@@ -280,7 +274,7 @@ for i, label in enumerate(np.unique(labels)[1:]):
         
         # Normal nucleus
         
-        ###nucelus_arr = np.pad(padding_nucleus_arr, shape_diff, pad_with)
+        nucelus_arr = np.pad(padding_nucleus_arr, shape_diff, pad_with)
         
         # H3k27me3 Channel
         intensity_h3k27me3 = replace_intensity(mask_unique, img_h3k27me3)
@@ -298,18 +292,22 @@ for i, label in enumerate(np.unique(labels)[1:]):
         #fop_trim = trim_array(intensity_fop)
         #fop_arr = ndi.binary_dilation(fop_trim, structure = diamond, iterations=2).astype(mask_unique.dtype)
         
-       ### merged_image = np.stack([fop_arr, h3k27me3_arr, foxj_arr, nucelus_arr], axis=0)
-
+        merged_image = np.stack([fop_arr, h3k27me3_arr, foxj_arr, nucelus_arr], axis=0)
+        OmeTiffWriter.save(merged_image,filename +  ".tif")
         
         #print(image3_T.shape)
         viewer = napari.Viewer()
         ####viewer.add_image(merged_image)
         ####viewer.add_image(image2_T)
         ####viewer.add_image(image3_T)
-        #viewer.add_image(intermodes_Threshold_Chromo)
+        viewer.add_image(intermodes_Threshold_Chromo)
         viewer.add_image(img_nuclei)
         viewer.add_image(mask)
         viewer.add_image(clean_mask)
         viewer.add_image(mask_unique)
         viewer.add_image(intensity_h3k27me3)
         viewer.add_image(intensity_foxj)
+
+from scipy import ndimage
+from scipy.ndimage import gaussian_filter
+
