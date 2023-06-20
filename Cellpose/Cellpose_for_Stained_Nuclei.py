@@ -16,6 +16,7 @@ import pandas as pd
 from aicsimageio import AICSImage
 import napari_simpleitk_image_processing as nsitk
 from skimage.morphology import skeletonize, thin, skeletonize_3d
+from scipy.ndimage import label
 
 from pathlib import Path
 #from astropy.visualization import simple_norm
@@ -104,7 +105,7 @@ def folder_scan(directory):
     return get_files
 
 
-folder_path = 'C:/Users/kaabi/Documents/Nuceli_Data/Enucleation/230507 OF1 D0 Actin 10uMVCA Gactin RYH2AX FRLaminB1/Actin'
+folder_path = 'C:/Users/kaabi/Documents/Nuceli_Data/Enucleation/230406 OF1 D1 Actin 10uMVCA Gactin RH3K9me2 FRH3K27me2/'
 
 get_files = folder_scan(folder_path)
 
@@ -131,8 +132,8 @@ for image in get_files:
         img_nuclei = aics_image.get_image_data("ZYX", T=0, C=2)
     else:
         img_actin = aics_image.get_image_data("ZYX", T=0, C=0) # Actin Channel
-        img_yh2ax = aics_image.get_image_data("ZYX", T=0, C=1) # yH2AX
-        img_laminb1 = aics_image.get_image_data("ZYX", T=0, C=2) # LaminB1
+        img_H3K27me3 = aics_image.get_image_data("ZYX", T=0, C=1) # yH2AX
+        img_H3K9me2 = aics_image.get_image_data("ZYX", T=0, C=2) # LaminB1
         img_nuclei = aics_image.get_image_data("ZYX", T=0, C=3) # Nucleus
     
     if not os.path.exists(folder_path + '/Result'):
@@ -148,16 +149,16 @@ for image in get_files:
     # for your single channel image use [0, 0] 
     # for the multi channel image it's [3, 0]
     channels = [0, 0] 
-    diameter = 165.257 #169.708
+    diameter = 224.397 #169.708
     use_GPU = True
     stitch_threshold=1
     #do_3D=True
     #resample=True
     cellprob_threshold = 0
 
-    pretrained_model = "C:/Users/kaabi/Documents/Nuceli_Data/Enucleation/Cellpose/models_trained_Nuclei/CP_20230306_150448_200"
+    pretrained_model = "C:/Users/kaabi/Documents/Nuceli_Data/Enucleation/Cellpose/Models_fixed_eNUC/CP_20230619_150738"
 
-    model_match_threshold = 29 #30
+    model_match_threshold = 27 #30
     flow_threshold = (31.0 - model_match_threshold) / 10.
 
     logger = io.logger_setup()
@@ -179,21 +180,14 @@ for image in get_files:
                                     )
 
     # Merge Segmented Mask
-    from scipy.ndimage import label
-    
-    def connected_components_labeling_box(binary_input):
-        labeled_array, num_labels = label(binary_input)
-        return labeled_array
 
-    merged_Labels = connected_components_labeling_box(mask)
-
-    #merged_Labels = cle.connected_components_labeling_box(mask)
+    merged_Labels = cle.connected_components_labeling_box(mask)
     merged_Labels_np = np.array(merged_Labels).astype('int32')
     print('The Filename ---', filename)
     ### Save the Mask
-    #prediction_stack_32 = img_as_float32(mask, force_copy=False)     
-    #os.chdir(Result_folder)
-    #imwrite(filename+".tif", prediction_stack_32)
+    prediction_stack_32 = img_as_float32(merged_Labels_np, force_copy=False)     
+    os.chdir(Result_folder)
+    imwrite(filename+".tif", prediction_stack_32)
     #merged_Labels_np = split_touching_objects(merged_Labels_np)
 
     # Structure  for Actin Dilation
@@ -228,11 +222,13 @@ for image in get_files:
                                                 shape= True, position= True)#, moments= True)
         
             nuclei_Area = statistics_nucleus.iloc[0, 26]
+            nuclei_Area = nuclei_Area*px_to_um_X*px_to_um_Y*px_to_um_Z
+            statistics_nucleus['Nucleus Area'] = nuclei_Area 
+            print('nuclei_Area ---', nuclei_Area)
 
             pd.DataFrame(statistics_nucleus).to_excel(Result_folder+'(Nucleus)_' + filename+'_'+ str(i)+'.xlsx')
         
-            nuclei_Area = nuclei_Area*px_to_um_X*px_to_um_Y*px_to_um_Z
-            print('nuclei_Area ---', nuclei_Area)
+           
             # # Chromocenter Segmentation
 
             # intensity_map_norm = normalize_intensity(intensity_nucelus)
@@ -276,29 +272,28 @@ for image in get_files:
             #actin_surf_Area = np.sum(statistics_surf_actin['area'], axis=0)
             actin_surf_Area = statistics_actin.iloc[0, 26]
             actin_surf_Area = actin_surf_Area * px_to_um_X
-            #print('Actin_surf_Area ---', actin_surf_Area) 
+            statistics_actin['Actin Surface Area'] = actin_surf_Area
+            print('Actin_surf_Area ---', actin_surf_Area) 
             # Write statistics to Excel file
-            #statistics_df = pd.DataFrame(statistics_surf_actin)
-            #statistics_df.to_excel(Result_folder + '(Actin)Actin_statistics_' + filename + '_' + str(i) + '.xlsx')   
             
-            # YH2AX Segmentation
+            statistics_actin.to_excel(Result_folder + '(Actin)_' + filename + '_' + str(i) + '.xlsx')   
+            
+            # H3K27me3 Segmentation
 
-            statistics_yh2ax = nsitk.label_statistics(intensity_image=img_yh2ax, label_image=dilated,
+            statistics_H3K27me3 = nsitk.label_statistics(intensity_image=img_H3K27me3, label_image=dilated,
                                                 size = True, intensity = True, perimeter= True,
                                                 shape= True, position= True)#, moments= True)
             
+            statistics_H3K27me3.to_excel(Result_folder + '(H3K27me3)_' + filename + '_' + str(i) + '.xlsx')   
+            H3K27me3_Intensity = statistics_H3K27me3.iloc[0, 2]
+            print('H3K27me3_Intensity ---', H3K27me3_Intensity)
             
-            statistics_yh2ax.to_excel(Result_folder + '(YH2AX)_' + filename + '_' + str(i) + '.xlsx')   
-            yh2ax_Intensity = statistics_yh2ax.iloc[0, 2]
-            print('YH2AX_Area ---', yh2ax_Intensity)
+            # H3K9me2 Segmentation
             
-            # LaminB1 Segmentation
-            
-            statistics_laminb1 = nsitk.label_statistics(intensity_image=img_laminb1, label_image=dilated,
+            statistics_H3K9me2 = nsitk.label_statistics(intensity_image=img_H3K9me2, label_image=dilated,
                                     size = True, intensity = True, perimeter= True,
                                     shape= True, position= True)#, moments= True)
-            statistics_laminb1.to_excel(Result_folder + '(LaminB1)_' + filename + '_' + str(i) + '.xlsx')   
-            
+            statistics_H3K9me2.to_excel(Result_folder + '(H3K9me2)_' + filename + '_' + str(i) + '.xlsx')   
 
-            laminb1_Intensity = statistics_laminb1.iloc[0, 2]
-            print('LaminB1_Area ---', laminb1_Intensity)
+            H3K9me2_Intensity = statistics_H3K9me2.iloc[0, 2]
+            print('H3K9me2_Intensity ---', H3K9me2_Intensity)
