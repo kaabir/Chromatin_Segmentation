@@ -82,6 +82,12 @@ def normalize_intensity(k):
     k[np.isnan(k)] = 0
     return k
 
+from scipy.ndimage import label
+
+def connected_components_labeling_box(binary_input):
+    labeled_array, num_labels = label(binary_input)
+    return labeled_array
+
 def pad_with(vector, pad_width, iaxis, kwargs):
     pad_value = kwargs.get('padder', 0)
     vector[:pad_width[0]] = pad_value
@@ -120,9 +126,9 @@ for image in get_files:
         img_dextran_read = aics_image.get_image_data("ZYX", T=0, C=1) # Dextran Channel
         img_nuclei = aics_image.get_image_data("ZYX", T=0, C=2)
     else:
-        img_fop = aics_image.get_image_data("ZYX", T=0, C=0) # Actin Channel 
-        img_h3k27me3 = aics_image.get_image_data("ZYX", T=0, C=1) # yH2AX
-        img_foxj = aics_image.get_image_data("ZYX", T=0, C=2) # LaminB1
+        img_h3k27me3 = aics_image.get_image_data("ZYX", T=0, C=0) # Actin Channel 
+        img_foxj = aics_image.get_image_data("ZYX", T=0, C=1) # yH2AX
+        img_fop = aics_image.get_image_data("ZYX", T=0, C=2) # LaminB1
         img_nuclei = aics_image.get_image_data("ZYX", T=0, C=3) # Nucleus
 
         img_nuclei = np.max(img_nuclei, axis=0)
@@ -276,6 +282,18 @@ for image in get_files:
             
             try:
                 intermodes_Threshold_Chromo = nsitk.threshold_intermodes(intensity_map_thb)
+                
+                statistics_Chromo = nsitk.label_statistics(intensity_image=img_nuclei, label_image=intermodes_Threshold_Chromo,
+                                                size = True, intensity = True, perimeter= True,
+                                                shape= True, position= True)#, moments= True)
+            
+                            
+                intermodes_chromo_Area = statistics_Chromo.loc[0, 'number_of_pixels']
+                chromointermodes_Area = intermodes_chromo_Area *px_to_um_X* px_to_um_Y
+                statistics_Chromo['Chromocenter Area'] = chromointermodes_Area 
+                print('Chromocenter_Area ---', chromointermodes_Area)
+                pd.DataFrame(statistics_Chromo).to_excel(Result_folder+'(Chromo)_' + filename + '_' + str(i)+'.xlsx')
+
             except RuntimeError:
                 print("No Chromocenter Found")
             
@@ -283,17 +301,7 @@ for image in get_files:
             # chromointermodes_Area = intermodes_chromo_Area *px_to_um_X* px_to_um_Y*px_to_um_Z
             #
         
-            statistics_Chromo = nsitk.label_statistics(intensity_image=intermodes_Threshold_Chromo, label_image=mask_unique,
-                                            size = True, intensity = True, perimeter= True,
-                                            shape= True, position= True)#, moments= True)
-        
-                        
-            intermodes_chromo_Area = statistics_Chromo.loc[0, 'number_of_pixels']
-            chromointermodes_Area = intermodes_chromo_Area *px_to_um_X* px_to_um_Y
-            statistics_Chromo['Chromocenter Area'] = chromointermodes_Area 
-            print('Chromocenter_Area ---', chromointermodes_Area)
-            pd.DataFrame(statistics_Chromo).to_excel(Result_folder+'(Chromo)_' + filename + '_' + str(i)+'.xlsx')
-
+            
         
         # Threshold isodata
         # image2_T = nsitk.threshold_isodata(image1_gb)
@@ -338,7 +346,7 @@ for image in get_files:
         #fop_arr = ndi.binary_dilation(fop_trim, structure = diamond, iterations=2).astype(mask_unique.dtype)
         
         # Green with Far Red and then Red and Blue channel
-            merged_image = np.stack([intensity_fop, intensity_h3k27me3, intensity_foxj, normal_nucelus], axis=0)
+            merged_image = np.stack([intensity_h3k27me3, intensity_foxj,intensity_fop, normal_nucelus], axis=0)
             os.chdir(Result_folder)
             OmeTiffWriter.save(merged_image,filename+'_'+ str(i) + ".tif")
         
