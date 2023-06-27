@@ -17,6 +17,7 @@ import pandas as pd
 from aicsimageio import AICSImage
 import napari_simpleitk_image_processing as nsitk
 from skimage.morphology import skeletonize, thin, skeletonize_3d
+from scipy.ndimage import label
 
 from pathlib import Path
 #from astropy.visualization import simple_norm
