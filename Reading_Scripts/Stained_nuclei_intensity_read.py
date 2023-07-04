@@ -41,14 +41,17 @@ region_Prop_actin = {"actin_intens_H3k27me3":[],"actin_intens_H3K9me2":[],"actin
 # ===========================================
 
 # Read the Tif/CZI File
-def folder_scan(directory, marker):
-    # Actin after 30min - value assigned is 3
+def folder_scan(directory, extension, marker=None):
+    # folder_scan(target_folder, ".xlsx", marker="(Chromo)")
     get_files = []
-    extension = ".xlsx"  # ".czi"
+    extension = extension  # ".xlsx"  # ".czi"
     for f_name in os.listdir(directory):
-        #print(f_name)
-        if f_name.find(marker) != -1 and f_name.endswith(extension):
-            get_files.append(os.path.join(directory, f_name))
+        if marker is not None:
+            if f_name.find(marker) != -1 and f_name.endswith(extension):
+                get_files.append(os.path.join(directory, f_name))
+        else:
+            if f_name.endswith(extension):
+                get_files.append(os.path.join(directory, f_name))
     return get_files
 
 def actin_Coverage(Nuc_Area,Actin_Area):
