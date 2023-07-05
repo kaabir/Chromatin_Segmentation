@@ -42,7 +42,7 @@ region_Prop_actin = {"actin_intens_H3k27me3":[],"actin_intens_H3K9me2":[],"actin
 
 # Read the Tif/CZI File
 def folder_scan(directory, extension, marker=None):
-    # folder_scan(target_folder, ".xlsx", marker="(Chromo)")
+    # folder_scan(chromo_folder, ".xlsx", marker="(Chromo)")
     get_files = []
     extension = extension  # ".xlsx"  # ".czi"
     for f_name in os.listdir(directory):
@@ -53,6 +53,41 @@ def folder_scan(directory, extension, marker=None):
             if f_name.endswith(extension):
                 get_files.append(os.path.join(directory, f_name))
     return get_files
+        
+def matchingFiles(sortedCells, sourceCells,sortedMarker=None, sourceMarker=None):
+    # Here I have filenames which are segmented labels of individual cells
+    # I want to sort the RGC images with their nucleus and choromo markers
+    # Note: not all nucleus with the segmentation would have chromocenter 
+    # To sort these and match correct files this function matches the files
+    # Example Use - ChromoFiles =  matchingFiles(rgc_Scan, chromo_Scan,sortedMarker=None, sourceMarker="(Chromo)_")
+    # Example Use -NucleusFiles =  matchingFiles(ChromoFiles, nucleus_Scan, sortedMarker="(Chromo)_", sourceMarker="(Nucleus)_")
+    
+    identifiers = []
+
+    matching_files = []
+    
+    if sortedMarker is None:
+        for temp_files in sortedCells:
+            file_name = os.path.basename(temp_files)
+            identifier = os.path.splitext(file_name)[0]
+            identifiers.append(identifier)
+    else:
+        for temp_files in sortedCells:
+            file_name = temp_files.split(sortedMarker)[1].split(".")[0].strip() #
+            identifier = file_name
+            identifiers.append(identifier)
+            
+    for identifier in identifiers:
+        #matching_files = []
+        # Find matching files in the source folder
+        for source_file in sourceCells:
+            file_name = source_file.split(sourceMarker)[1].split(".")[0].strip() #
+
+            if identifier == file_name:
+                matching_files.append(source_file)
+                #print(matching_files)
+                
+    return matching_files   
 
 def actin_Coverage(Nuc_Area,Actin_Area):
            # Pd to np et divide
