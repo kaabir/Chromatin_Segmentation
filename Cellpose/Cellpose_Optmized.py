@@ -260,9 +260,9 @@ def connected_components_labeling_box(binary_input):
 print(" Folder List Stage")
 
 folder_list = [
-    'E:/Quantified/eNUC Live/230628 enuc vca vs novca/Test_Center/1/',
-    'E:/Quantified/eNUC Live/230628 enuc vca vs novca/Test_Center/2/',
-    'E:/Quantified/eNUC Live/230628 enuc vca vs novca/Test_Center/3/'
+    'E:/Quantified/eNUC Live/230120 OF1 D0 Enuc Ctrl5_actin5/T0/',
+    'E:/Quantified/eNUC Live/230120 OF1 D0 Enuc Ctrl5_actin5/T30/',
+    'E:/Quantified/eNUC Live/230628 enuc vca vs novca/done/',
 ]
 
 for folder_name in folder_list:
