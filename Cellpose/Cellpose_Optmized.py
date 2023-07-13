@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 Created on Wed Apr 24 11:54:07 2023
-
 @author: kaabir
 """
 import time, os, sys
@@ -31,22 +30,191 @@ from skimage import measure
 from scipy.ndimage import gaussian_filter
 from skimage import morphology
 from skimage.morphology import binary_dilation
+from scipy import ndimage
+from skimage import exposure
+from scipy.ndimage import binary_fill_holes
+from skimage.morphology import closing, square
+from scipy.ndimage import binary_closing
+from skimage import measure
+from skimage.morphology import ball
 from scipy import ndimage as ndi
+import napari_segment_blobs_and_things_with_membranes as nsbatwm
+from scipy.ndimage import label, generate_binary_structure
+from topostats.tracing.tracingfuncs import getSkeleton
+
 
 #device = cle.select_device("gfx1032")
 #device = cle.select_device("AMD Radeon Pro W6600")
 
+def pruneSkeleton(inputImage, opImgSize):
+    """Function to remove the hanging branches from the skeletons - these
+    are a persistent problem in the overall tracing process."""
+    
+    number_of_branches = 0
+    thinned_slice = thin(inputImage)
+    coordinates = np.argwhere(thinned_slice == 1).tolist()
+    #print('coordinates >>>>', coordinates)
+
+    # The branches are typically short so if a branch is longer than a quarter
+    # of the total points, it's assumed to be part of the real data
+    length_of_trace = len(coordinates)
+    max_branch_length = int(length_of_trace * 0.05)
+
+    # first check to find all the end coordinates in the trace
+    potential_branch_ends = []
+
+    # Most of the branch ends are just points with one neighbor
+    for x, y in coordinates:
+        if countNeighbours(x, y, coordinates) == 1:
+            potential_branch_ends.append([x, y])
+
+    # Now check if it's a branch and if it is, delete it
+    for x_b, y_b in potential_branch_ends:
+        branch_coordinates = [[x_b, y_b]]
+        branch_continues = True
+        temp_coordinates = coordinates[:]
+        temp_coordinates.pop(temp_coordinates.index([x_b, y_b]))
+
+        is_branch = False
+
+        while branch_continues:
+            no_of_neighbours, neighbours = countandGetNeighbours(x_b, y_b, temp_coordinates)
+
+            # If branch continues
+            if no_of_neighbours == 1:
+                x_b, y_b = neighbours[0]
+                branch_coordinates.append([x_b, y_b])
+                temp_coordinates.pop(temp_coordinates.index([x_b, y_b]))
+
+            # If the branch reaches the edge of the main trace
+            elif no_of_neighbours > 1:
+                branch_coordinates.pop(branch_coordinates.index([x_b, y_b]))
+                branch_continues = False
+                is_branch = True
+            # Weird case that happens sometimes
+            elif no_of_neighbours == 0:
+                is_branch = True
+                branch_continues = False
+
+            if len(branch_coordinates) > max_branch_length:
+                branch_continues = False
+                is_branch = False
+
+        if is_branch:
+            number_of_branches += 1
+            for x, y in branch_coordinates:
+                thinned_slice[x, y] = 0
+
+    #remaining_coordinates = np.argwhere(thinned_slice)
+    #purged = cle.exclude_small_labels(thinned_slice, maximum_size=25)
+    # Create an image of zeros with the same shape as the input image
+    result_image = np.zeros_like(opImgSize)
+    result_image[np.where(thinned_slice)] = 1
+
+    # Put the remaining coordinates back into the result image
+    # for x, y in remaining_coordinates:
+    #     result_image[x, y] = 1
+        
+    #print('resulting Image size >>>>', result_image.size)
+    #print('remaining_coordinates >>>>', remaining_coordinates)
+    return result_image
+
+
+
+def countandGetNeighbours(x, y, trace_coordinates):
+    """Returns the number of neighboring points for a coordinate and an
+    array containing those points"""
+
+    neighbour_array = []
+    number_of_neighbours = 0
+    if [x, y + 1] in trace_coordinates:
+        neighbour_array.append([x, y + 1])
+        number_of_neighbours += 1
+    if [x + 1, y + 1] in trace_coordinates:
+        neighbour_array.append([x + 1, y + 1])
+        number_of_neighbours += 1
+    if [x + 1, y] in trace_coordinates:
+        neighbour_array.append([x + 1, y])
+        number_of_neighbours += 1
+    if [x + 1, y - 1] in trace_coordinates:
+        neighbour_array.append([x + 1, y - 1])
+        number_of_neighbours += 1
+    if [x, y - 1] in trace_coordinates:
+        neighbour_array.append([x, y - 1])
+        number_of_neighbours += 1
+    if [x - 1, y - 1] in trace_coordinates:
+        neighbour_array.append([x - 1, y - 1])
+        number_of_neighbours += 1
+    if [x - 1, y] in trace_coordinates:
+        neighbour_array.append([x - 1, y])
+        number_of_neighbours += 1
+    if [x - 1, y + 1] in trace_coordinates:
+        neighbour_array.append([x - 1, y + 1])
+        number_of_neighbours += 1
+    return number_of_neighbours, neighbour_array
+
+
+def countNeighbours(x, y, trace_coordinates):
+    """Counts the number of neighboring points for a given coordinate in
+    a list of points"""
+
+    number_of_neighbours = 0
+    if [x, y + 1] in trace_coordinates:
+        number_of_neighbours += 1
+    if [x + 1, y + 1] in trace_coordinates:
+        number_of_neighbours += 1
+    if [x + 1, y] in trace_coordinates:
+        number_of_neighbours += 1
+    if [x + 1, y - 1] in trace_coordinates:
+        number_of_neighbours += 1
+    if [x, y - 1] in trace_coordinates:
+        number_of_neighbours += 1
+    if [x - 1, y - 1] in trace_coordinates:
+        number_of_neighbours += 1
+    if [x - 1, y] in trace_coordinates:
+        number_of_neighbours += 1
+    if [x - 1, y + 1] in trace_coordinates:
+        number_of_neighbours += 1
+    return number_of_neighbours
+
+def fill_large_hole(binary_image):
+    # Fills large holes and smoothes edges
+    # Iterate over each 2D slice of the 3D image
+    filled_slices = []
+    smoothing_radius=5
+    for slice in binary_image:
+        # Fill holes in the slice
+        filled_slice = binary_fill_holes(slice)
+        
+        # Smooth the filled slice using binary closing
+        struct = morphology.disk(smoothing_radius)
+        smoothed_slice = morphology.binary_closing(filled_slice, selem=struct)
+        
+        filled_slices.append(smoothed_slice)
+
+    # Stack the filled slices back into a 3D image
+    filled_image = np.stack(filled_slices)
+
+    return filled_image
+
 def replace_intensity(mask, img):
     if not (mask.shape == img.shape):
-        return False
+        print("Mask shape differs from image shape")
+        return None
+    
+    # Convert the mask to the same data type as the image
+    mask = mask.astype(img.dtype)
+    
+    # Overlap Mask on original image (as reference)
+    mat_intensity = np.where(np.logical_and(mask, img), img, 0)
+    
+    return mat_intensity
 
-    replace_intensity = np.where(np.logical_and(mask,img),img,0) # Overlap Mask on original image (as reference)
-    #chromocenter_intensity = np.array(cle.replace_intensities(mask,img))
-    return replace_intensity
-
+#np.seterr(divide='ignore', invalid='ignore')
 def normalize_intensity(k):
-    #k_min = k.min(axis=(1, 2), keepdims=True)
-    #k_max = k.max(axis=(1, 2), keepdims=True)
+    #return np.clip(k, 0., 1., out=k)
+    # ##k_min = k.min(axis=(1, 2), keepdims=True)
+    # ##k_max = k.max(axis=(1, 2), keepdims=True)
     k_min = k.min()
     k_max = k.max()
 
@@ -75,8 +243,8 @@ def analyze_actin(mask, img_actin, filename, i):
         act_obj[i] = thinned_slice
     
     statistics_surf_actin = nsitk.label_statistics(intensity_image=actin_img, label_image=act_obj,
-                                            size = True, intensity = True, perimeter= True,
-                                            shape= True, position= True)#, moments= True)
+                                    size = True, intensity = True, perimeter= True,
+                                    shape= True, position= True)#, moments= True)
     #statistics_surf_actin = cle.statistics_of_labelled_pixels(actin_img, act_obj)
 
     actin_surf_Area = np.sum(statistics_surf_actin['area'], axis=0)
@@ -107,7 +275,6 @@ def folder_scan(directory):
             get_files.append(os.path.join(directory, f_name))
     return get_files
 
-from scipy import ndimage
 # def connected_components_labeling_box(binary_input):
 #     labeled_array, nb_labels = ndimage.label(binary_input)
 #     sizes = ndimage.sum(binary_input, labeled_array, range(nb_labels + 1))
@@ -117,12 +284,19 @@ from scipy import ndimage
 #     print(binary_input)
 #     return binary_input
 
+# Contrast stretching
+def contrast_stretching(img):
+    p2, p98 = np.percentile(img, (2, 98))
+    img_rescale = exposure.rescale_intensity(img, in_range=(p2, p98))
+    
+    return img_rescale
+
 def connected_components_labeling_box(binary_input):
     binary_input = binary_input.astype('int32')
     labeled_array, num_labels = ndimage.label(binary_input)
     return labeled_array
 
-folder_path = 'E:/Quantified/eNUC Live/230628 enuc vca vs novca/'
+folder_path = 'E:/Quantified/eNUC Live/230628 enuc vca vs novca/Test_Center/toGenerateMask_Cellpose/'
 
 get_files = folder_scan(folder_path)
 
@@ -142,7 +316,7 @@ for image in get_files:
     if no_chnls == 1:
         img_nuclei = aics_image.get_image_data("ZYX", T=0, C=0) 
     elif no_chnls == 2: 
-        img_dextran = aics_image.get_image_data("ZYX", T=0, C=0) # A Channel
+        img_actin = aics_image.get_image_data("ZYX", T=0, C=0) # A Channel
         img_nuclei = aics_image.get_image_data("ZYX", T=0, C=1)
     elif no_chnls == 3:
         img_actin = aics_image.get_image_data("ZYX", T=0, C=0) # A Channel
@@ -183,19 +357,19 @@ for image in get_files:
     print('Segmenting Image ---', filename)
     model = models.CellposeModel(gpu=use_GPU, model_type=pretrained_model)#,residual_on=False, style_on=False, concatenation=False)#, resample=True, do_3D=True,stitch_threshold=1)
     mask, flows,styles = model.eval(img_nuclei,
-                                channels =channels,
-                                #anisotropy=anisotropy,
-                                diameter=diameter, 
-                                #pretrained_model=pretrained_model,
-                                do_3D=False,
-                                resample=True,
-                                min_size = -1,
-                                flow_threshold =flow_threshold,
-                                cellprob_threshold = cellprob_threshold,
-                                net_avg=True,
-                                stitch_threshold=stitch_threshold,
-                                #model_match_threshold = model_match_threshold
-                                    )
+                        channels =channels,
+                        #anisotropy=anisotropy,
+                        diameter=diameter, 
+                        #pretrained_model=pretrained_model,
+                        do_3D=False,
+                        resample=True,
+                        min_size = -1,
+                        flow_threshold =flow_threshold,
+                        cellprob_threshold = cellprob_threshold,
+                        net_avg=True,
+                        stitch_threshold=stitch_threshold,
+                        #model_match_threshold = model_match_threshold
+                            )
 
     # Merge Segmented Mask
     print('The Filename ---', filename)
@@ -207,141 +381,241 @@ for image in get_files:
     prediction_stack_32 = img_as_float32(merged_Labels_np, force_copy=False)     
     os.chdir(Result_folder)
     imwrite(filename+".tif", prediction_stack_32)
-    #merged_Labels_np = split_touching_objects(merged_Labels_np)
 
     # Structure  for Actin Dilation
     diamond = np.zeros((3, 3, 3), dtype=bool)
     diamond[1:2, 0:3, 0:3] = True
 
-    #print('Number_of_Nuclei',len(np.unique(merged_Labels))-1) first is mask
+    label_OrgCnt = measure.label(merged_Labels_np)
 
-    from skimage import measure
-    labels = measure.label(merged_Labels_np)
+        # Calculate the number of stacks for each label
+    label_counts = np.bincount(label_OrgCnt.ravel())
+    
+    print("Number of Unique mask Found", np.unique(label_OrgCnt)[1:])
+    for lbl_count in np.unique(label_OrgCnt)[1:]:
+        count = 1
+        if label_counts[lbl_count] >= 100000:
 
+            print('lbl_count >>>>', lbl_count)
+    
+            maskLBL = label_OrgCnt == lbl_count
+            nucleus_Inten = replace_intensity(maskLBL,img_nuclei)
+            print("Nucleus Intensity")
+            
+            nucelus_IntenNorm = normalize_intensity(nucleus_Inten)
+            print("normalize_intensity")
+            nucelus_AdaptEq = exposure.equalize_adapthist(nucelus_IntenNorm, clip_limit=0.03)
+            print("equalize_adapthist")
+            nucelus_GB = nsitk.gaussian_blur(nucelus_AdaptEq, 2.0, 2.0, 0.0)
+            nucelus_OT = nsitk.threshold_otsu(nucelus_GB)
+            print("Threshold Otsu")
+            # Chromo_SGB = cle.subtract_gaussian_background(nucelus_GB, None, 10.0, 10.0, 0.0)            
+            # Chromo_Thres_Inter = nsitk.threshold_intermodes(Chromo_SGB)
 
-    for i, label in enumerate(np.unique(labels)[1:]):
-        print('i >>>>', i)
-        #print('label ---', label)
-        if label in labels:
-            print('label >>>>', label)
-            # create a mask for the current label
-            #if (len(np.unique(merged_Labels)-1) == 1):# and no_chnls>1:
-                # break    
-            mask = labels == label
-            ###nuc_lbl = np.array(label)
-            intensity_nucelus= replace_intensity(mask, img_nuclei)
-            image1_gb = nsitk.gaussian_blur(intensity_nucelus, 2.0, 2.0, 0.0)
-            # threshold isodata
-            image2_T = nsitk.threshold_isodata(image1_gb)
-            # connected component labeling
-            image3_C = nsitk.connected_component_labeling(image2_T)
+            structuring_element = generate_binary_structure(nucelus_OT.ndim, 3)
         
-            statistics_nucleus = nsitk.label_statistics(intensity_image=intensity_nucelus, label_image=mask,
-                                                size = True, intensity = True, perimeter= True,
-                                                shape= True, position= True)#, moments= True)
+            nucelus_FLH1 = fill_large_hole(nucelus_OT)
+            print("Nucleus Fill Large Holes")
+            nucelus_FLH2 = fill_large_hole(nucelus_FLH1)#.astype(int)
+
+            print("Nucleus Fill Large Holes 2")    
+            # # Nucleus Segmentation
         
-            nuclei_Area = statistics_nucleus.loc[0, 'number_of_pixels']
+            statistics_nucleus = cle.statistics_of_labelled_pixels(img_nuclei, nucelus_FLH2)    
+
+            print("nucleus Statisitcs")
+            nuclei_Area = np.sum(statistics_nucleus['area'], axis=0)
+            #nuclei_Area = statistics_nucleus.loc[0, 'number_of_pixels']
+            print("Number of Pixels", nuclei_Area)
             nuclei_Area = nuclei_Area*px_to_um_X*px_to_um_Y*px_to_um_Z
-            statistics_nucleus['Nucleus Area'] = nuclei_Area 
+            statistics_nucleus['Nucleus Area'] = nuclei_Area
+            print('nuclei_Area >>>>', nuclei_Area)
             
-            viewer = napari.Viewer()
             
-            # viewer.add_image(mask)
+            pd.DataFrame(statistics_nucleus).to_excel(Result_folder+'(Nucleus)_' + filename+'_'+ str(lbl_count)+'.xlsx')
             
-            if nuclei_Area > 100: # model diam_labels  165.257 (mean diameter of training ROIs)
-                print('nuclei_Area >>>>', nuclei_Area)
-                pd.DataFrame(statistics_nucleus).to_excel(Result_folder+'(Nucleus)_' + filename+'_'+ str(i)+'.xlsx')
+            # Chromocenter Segmentation
+            
+            Chromo_GB = cle.gaussian_blur(nucelus_IntenNorm, None, 2.0, 2.0, 0.0)
+            #image1_gb = cle.gaussian_blur(intensity_map_norm, None, 2.0, 2.0, 0.0)
+            Chromo_THB = cle.top_hat_box(Chromo_GB, None, 15.0, 15.0, 0.0)
+            # subtract gaussian background
+            Chromo_SGB = cle.subtract_gaussian_background(Chromo_THB, None, 10.0, 10.0, 0.0)
+            
+
+            Chromo_Thres_Inter = nsitk.threshold_intermodes(Chromo_SGB)
         
-           
-                # # Chromocenter Segmentation
+            Chromo_Thres_Inter_Comb = cle.connected_components_labeling_box(Chromo_Thres_Inter)
+            statistics_Chromo = cle.statistics_of_labelled_pixels(img_nuclei, Chromo_Thres_Inter_Comb)                 
+            intermodes_chromo_Area = np.sum(statistics_Chromo['area'], axis=0)
+        
+            #intermodes_chromo_Area = statistics_Chromo.loc[0, 'number_of_pixels']
+            chromointermodes_Area = intermodes_chromo_Area *px_to_um_X* px_to_um_Y
+            statistics_Chromo['Chromocenter Area'] = chromointermodes_Area 
+            print('Chromocenter_Area >>>>', chromointermodes_Area)
+            pd.DataFrame(statistics_Chromo).to_excel(Result_folder+'(Chromo)_' + filename + '_' + str(lbl_count)+'.xlsx')   
+            
+            nuc_EdgThin = np.zeros(img_nuclei.shape)
+            
+            for i in range(nucelus_FLH2.shape[0]):            
+                thinned_slice = cle.reduce_labels_to_label_edges(nucelus_FLH2[i]) #cle.reduce_labels_to_label_edges(image2_FH[i])            
+                nuc_EdgThin[i] = thinned_slice
+                    
+            print('nucleus Edge Thinning >>>>')
+            
+            nuc_EdgThin_Ar = np.array(nuc_EdgThin)
 
-                intensity_map_norm = normalize_intensity(intensity_nucelus)
-                viewer.add_image(intensity_map_norm)
-                # Gaussian blur
-                image1_gb = cle.gaussian_blur(intensity_map_norm, None, 2.0, 2.0, 0.0)
-                image2_thb = cle.top_hat_box(image1_gb, None, 15.0, 15.0, 0.0)
-                # subtract gaussian background
-                image3_sgb = cle.subtract_gaussian_background(image2_thb, None, 10.0, 10.0, 0.0)
-            
-                try:
-                    # threshold intermodes
-                    intermodes_Threshold_Chromo = nsitk.threshold_intermodes(image3_sgb)
-                    viewer.add_labels(intermodes_Threshold_Chromo)
-                    
-                    # Chromocenter Segmentation
-                    #viewer.add_image(intermodes_Threshold_Chromo)
-                    
-                    statistics_Chromo = nsitk.label_statistics(intensity_image=img_nuclei, label_image=intermodes_Threshold_Chromo,
-                                                size = True, intensity = True, perimeter= True,
-                                                shape= True, position= True)#, moments= True)
-            
-                            
-                    intermodes_chromo_Area = statistics_Chromo.loc[0, 'number_of_pixels']
-                    chromointermodes_Area = intermodes_chromo_Area *px_to_um_X* px_to_um_Y
-                    statistics_Chromo['Chromocenter Area'] = chromointermodes_Area 
-                    print('Chromocenter_Area >>>>', chromointermodes_Area)
-                    pd.DataFrame(statistics_Chromo).to_excel(Result_folder+'(Chromo)_' + filename + '_' + str(i)+'.xlsx')
-                    
-                    # Save Chromocenter Mask
-                    ### Save the Mask
-                    chromo_stack_32 = img_as_float32(intermodes_Threshold_Chromo, force_copy=False)     
-                    os.chdir(Result_folder)
-                    imwrite("(Intermodes_chromocenter)" +filename+".tif", chromo_stack_32)
-                except RuntimeError:
-                    print("No Chromocenter Found")
-                    
-                #  # # Chromocenter Segmentation   with Max Entropy
-                # intensity_gauss = nsitk.gaussian_blur(intensity_map_norm, variance_x=2, variance_y=2, variance_z=0)
-                # intensity_maxEntrp = nsitk.threshold_maximum_entropy(intensity_gauss)
-                # ### Save the Mask
-                # chromo_stack_32 = img_as_float32(intensity_maxEntrp , force_copy=False)     
-                # os.chdir(Result_folder)
-                # imwrite("(Intermodes_chromocenter)" +filename+".tif", chromo_stack_32) 
-                    
-                    
-                    
-            
-                # Actin Segmentation
-                    if 'img_actin' in locals(): #or 'img_actin' in globals():
-                    # Separate Ctrl
-                        pass
-           
-                        act_obj = np.zeros(img_nuclei.shape)
-                        dilated = ndi.binary_dilation(mask, diamond, iterations=10).astype(mask.dtype)
-                        actin_img = replace_intensity(dilated, img_actin)
-                        actin_filter = nsitk.median_filter(actin_img, radius_x=2, radius_y=2, radius_z=0)
-                        actin_binary = nsitk.threshold_otsu(actin_filter)
-
-                        act_obj = np.zeros(img_nuclei.shape)
-
-                    # Apply thinning function to each slice of the actin binary image
-                        for i in range(actin_binary.shape[0]):
-                                thinned_slice = thin(actin_binary[i])
-                                act_obj[i] = thinned_slice
-            
-                        statistics_actin = nsitk.label_statistics(intensity_image=actin_img, label_image=act_obj,
-                                                size = True, intensity = True, perimeter= True,
-                                                shape= True, position= True)#, moments= True)
-
-                        #actin_surf_Area = np.sum(statistics_surf_actin['area'], axis=0)
-                        actin_surf_Area = statistics_actin.loc[0, 'number_of_pixels']
-                        actin_surf_Area = actin_surf_Area * px_to_um_X
-                        statistics_actin['Actin Surface Area'] = actin_surf_Area
-            
-                        if actin_surf_Area in range(200, 600): 
-                            print('Actin_surf_Area ---', actin_surf_Area) 
-                            # Write statistics to Excel file
-            
-                            statistics_actin.to_excel(Result_folder + '(Actin)_' + filename + '_' + str(i) + '.xlsx')   
-
-            
             # Actin Segmentation
- 
-            if 'img_actin' in globals(): #or 'img_actin' in globals():
-                # Separate Ctrl
-                pass
+
+            act_obj = np.zeros(img_actin.shape)
+                
+            dilated = ndimage.binary_dilation(maskLBL, diamond, iterations=10).astype(maskLBL.dtype)
+            actin_img = replace_intensity(dilated, img_actin)
+            actin_img_N = normalize_intensity(actin_img)
+            print(">> Actin Intensity Normalized <<")
+        
+            # Adaptive Thresholding
+            min_threshold_mean = 20
+            min_threshold_std = 800
             
-                analyze_actin(mask, img_actin, filename, i)
+            img_adapteq = exposure.equalize_adapthist(actin_img_N, clip_limit=0.03)
+            
+            img_mean = np.mean(actin_img)
+            print('Mean Actin Intensity >>>>', img_mean)
+            img_std = np.std(actin_img)
+            print('Std Actin Intensity >>>>', img_std)
+            
+            #######
+            # View Segmentation
+            #######
+            viewer = napari.Viewer()
+            viewer.add_image(nucleus_Inten)
+            viewer.add_image(nuc_EdgThin_Ar)
+            viewer.add_labels(Chromo_Thres_Inter)
+            viewer.add_image(actin_img_N)
+        
+            image2_Blur = cle.gaussian_blur(img_adapteq, None, 2.0, 2.0, 0.0)
+            image2_Gaus = nsitk.white_top_hat(image2_Blur, 10, 10, 0)
+            print('>> Pre Filtering Actin <<')
+            if img_mean >= min_threshold_mean and img_std <= min_threshold_std:
+                actin_binary = nsitk.threshold_otsu(image2_Gaus)
+                print("Ostu")
+
+                act_obj = np.zeros(img_nuclei.shape)
+
+                # Apply Otsu thresholding
+                ####################
+                # Condition to remove background Actin segmentation
+
+                opImBase = img_nuclei[0,:,:]        
+            
+                for i in range(actin_binary.shape[0]):
+                    prune = pruneSkeleton(actin_binary[i], opImBase)
+                    act_obj[i] = prune
+
+                #######
+                # View Segmentation
+                #######
+                viewer.add_image(act_obj)
+
+                # Compute the standard deviation for each slice in the binary mask
+                std_per_slice = np.std(act_obj, axis=(1, 2))
+
+                # Calculate the ratio of the first and second value of the standard deviation
+                ratio = std_per_slice[0] / std_per_slice[1]
+
+                # Find the indices of slices that have a ratio higher than a threshold
+                threshold_ratio = 5.0  # Set your desired threshold ratio here
+                indices_to_remove = np.where(std_per_slice[1:] / std_per_slice[:-1] > threshold_ratio)[0]  + 1
+
+                # Set the values of the slices to zero instead of deleting them
+                act_obj[indices_to_remove] = 0
+        
+                # Write statistics to Excel file
+                statistics_Actin =  cle.statistics_of_labelled_pixels(img_actin, actin_binary)    
+
+                print("Actin Found")
+
+
+                Coverage = []
+                for act_Z, nucl_Z in zip(act_obj, nuc_EdgThin_Ar):
+                    ratio = np.sum(act_Z) / np.sum(nucl_Z)
+                    if np.sum(nucl_Z) != 0 and np.sum(act_Z) != 0:
+                        if ratio > 1 and ratio < 1.6:#ratio <= 100:
+                            Coverage.append(100)
+
+                        else:
+                            Coverage.append(ratio * 100)
+            
+                        coverage_values = [value for value in Coverage if value is not None and not np.isnan(value) and value != 0]
+
+                        if coverage_values:
+                            actin_coverage = sum(coverage_values) / len(coverage_values)
+                        else:
+                            actin_coverage = 0.0
+                        
+                        print("Actin Coverage:", actin_coverage)
+                statistics_Actin['Actin Coverage'] = actin_coverage                
+                pd.DataFrame(statistics_Actin).to_excel(Result_folder + '(Actin)_' + filename + '_' + str(lbl_count) + '.xlsx')             
+            
+            elif img_std >= min_threshold_std:
+                actin_binary = nsitk.threshold_maximum_entropy(image2_Gaus)
+                #viewer.add_image(actin_img)
+                print("Max entropy")
+            
+                opImBase = img_nuclei[0,:,:]        
+            
+                for i in range(actin_binary.shape[0]):
+                    prune = pruneSkeleton(actin_binary[i], opImBase)
+                    act_obj[i] = prune
+                    
+                #######
+                # View Segmentation
+                #######
+                viewer.add_image(act_obj)
+                # Compute the standard deviation for each slice in the binary mask
+                std_per_slice = np.std(act_obj, axis=(1, 2))
+
+                # Calculate the ratio of the first and second value of the standard deviation
+                ratio = std_per_slice[0] / std_per_slice[1]
+
+                # Find the indices of slices that have a ratio higher than a threshold
+                threshold_ratio = 5.0  # Set your desired threshold ratio here
+                indices_to_remove = np.where(std_per_slice[1:] / std_per_slice[:-1] > threshold_ratio)[0]  + 1
+
+                # Set the values of the slices to zero instead of deleting them
+                act_obj[indices_to_remove] = 0
+
+                statistics_Actin =  cle.statistics_of_labelled_pixels(img_actin, actin_binary)    
+
+                print("Actin Found")
+
+                Coverage = []
+                for act_Z, nucl_Z in zip(act_obj, nuc_EdgThin_Ar):
+                    ratio = np.sum(act_Z) / np.sum(nucl_Z)
+                    if np.sum(nucl_Z) != 0 and np.sum(act_Z) != 0:
+                        if ratio > 1 and ratio < 1.6:#ratio <= 100:
+                            Coverage.append(100)
+                        else:
+                            Coverage.append(ratio * 100)
+            
+                        coverage_values = [value for value in Coverage if value is not None and not np.isnan(value) and value != 0]
+
+                        if coverage_values:
+                            actin_coverage = sum(coverage_values) / len(coverage_values)
+                        else:
+                            actin_coverage = 0.0
+
+                        print("Actin Coverage:", actin_coverage)
+                statistics_Actin['Actin Coverage'] = actin_coverage                
+                pd.DataFrame(statistics_Actin).to_excel(Result_folder + '(Actin)_' + filename + '_' + str(lbl_count) + '.xlsx')
+                    
+                
+            else:
+                #actin_binary = nsitk.threshold_maximum_entropy(image2_Gaus)
+                print("No actin present")
+
+
                 
 # Next Optimization
 # from skimage import measure
