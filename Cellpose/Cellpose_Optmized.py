@@ -235,11 +235,10 @@ def trim_array(arr, mask):
 
 # Read the Tif/CZI File
 def folder_scan(directory):
-    # Actin after 30min - value assigned is 3
+    valid_extensions = (".czi", ".tif")  # Valid extensions: CZI and TIF
     get_files = []
-    extension = ".czi"  # ".czi"
     for f_name in os.listdir(directory):
-        if f_name.endswith(extension):
+        if f_name.lower().endswith(valid_extensions):
             get_files.append(os.path.join(directory, f_name))
     return get_files
 
@@ -349,7 +348,7 @@ for folder_name in folder_list:
         ### Save the Mask
         prediction_stack_32 = img_as_float32(merged_Labels_np, force_copy=False)     
         os.chdir(Result_folder)
-        imwrite(filename+".tif", prediction_stack_32)
+        imwrite("(Mask)_"+filename+".tif", prediction_stack_32)
 
         # Structure  for Actin Dilation
         diamond = np.zeros((3, 3, 3), dtype=bool)
@@ -400,7 +399,7 @@ for folder_name in folder_list:
                 statistics_nucleus['Nucleus Area'] = nuclei_Area
                 print('nuclei_Area >>>>', nuclei_Area)
             
-                ### Save the Actin Mask
+                ### Save the Nucleus Mask
                 prediction_stack_32 = img_as_float32(nucelus_FLH2, force_copy=False)     
                 os.chdir(Result_folder)
                 imwrite("(Nucleus)_"+filename+".tif", prediction_stack_32)              
@@ -440,7 +439,7 @@ for folder_name in folder_list:
                 statistics_Chromo['Chromocenter Area'] = chromointermodes_Area 
                 print('Chromocenter_Area >>>>', chromointermodes_Area)
 
-                ### Save the Actin Mask
+                ### Save the Chromocenter Mask
                 prediction_stack_32 = img_as_float32(Chromo_Thres_Inter2, force_copy=False)     
                 os.chdir(Result_folder)
                 imwrite("(Chromocenter)_"+filename+".tif", prediction_stack_32)                            
@@ -479,15 +478,15 @@ for folder_name in folder_list:
                 #######
                 # View Segmentation
                 #######
-                viewer = napari.Viewer()
-                viewer.add_image(nucleus_Inten)  
-                viewer.add_image(nucelus_AdaptEq)
-                viewer.add_image(nuc_EdgThin_Ar)
-                #viewer.add_labels(Chromo_Thres_Inter1)
-                viewer.add_labels(Chromo_Thres_Inter2)
-                #viewer.add_labels(Chromo_Thres_Inter3)
-                viewer.add_image(actin_img_N)
-                viewer.add_image(actin_adapteq)
+                # viewer = napari.Viewer()
+                # viewer.add_image(nucleus_Inten)  
+                # viewer.add_image(nucelus_AdaptEq)
+                # viewer.add_image(nuc_EdgThin_Ar)
+                # #viewer.add_labels(Chromo_Thres_Inter1)
+                # viewer.add_labels(Chromo_Thres_Inter2)
+                # #viewer.add_labels(Chromo_Thres_Inter3)
+                # viewer.add_image(actin_img_N)
+                # viewer.add_image(actin_adapteq)
         
                 image2_Blur = cle.gaussian_blur(actin_adapteq, None, 2.0, 2.0, 0.0)
                 image2_Gaus = nsitk.white_top_hat(image2_Blur, 10, 10, 0)
@@ -511,7 +510,7 @@ for folder_name in folder_list:
                     #######
                     # View Segmentation
                     #######
-                    viewer.add_image(act_obj)
+                    #viewer.add_image(act_obj)
                 
                     # Compute the standard deviation for each slice in the binary mask
                     std_per_slice = np.std(act_obj, axis=(1, 2))
@@ -556,7 +555,7 @@ for folder_name in folder_list:
                     ### Save the Actin Mask
                     prediction_stack_32 = img_as_float32(actin_binary, force_copy=False)     
                     os.chdir(Result_folder)
-                    imwrite(+"(Actin)_"+filename+".tif", prediction_stack_32)                    
+                    imwrite("(Actin)_"+filename+".tif", prediction_stack_32)                    
                     pd.DataFrame(statistics_Actin).to_excel('(Actin)_' + filename + '_' + str(lbl_count) + '.xlsx')             
             
                 elif img_std >= min_threshold_std:
@@ -573,7 +572,7 @@ for folder_name in folder_list:
                     #######
                     # View Segmentation
                     #######
-                    viewer.add_image(act_obj)
+                    #viewer.add_image(act_obj)
                     # Compute the standard deviation for each slice in the binary mask
                     std_per_slice = np.std(act_obj, axis=(1, 2))
 
@@ -615,7 +614,7 @@ for folder_name in folder_list:
                     ### Save the Actin Mask
                     prediction_stack_32 = img_as_float32(actin_binary, force_copy=False)     
                     os.chdir(Result_folder)
-                    imwrite(+"(Actin)_"+filename+".tif", prediction_stack_32)            
+                    imwrite("(Actin)_"+filename+".tif", prediction_stack_32)            
                     pd.DataFrame(statistics_Actin).to_excel('(Actin)_' + filename + '_' + str(lbl_count) + '.xlsx')
                                 
                 else:
