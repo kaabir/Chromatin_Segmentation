@@ -370,6 +370,17 @@ for folder_name in folder_list:
                 nucleus_Inten = replace_intensity(maskLBL,img_nuclei)
                 print("Nucleus Intensity")
             
+                if 'img_dextran' in globals():
+                    checkPorous = replace_intensity(maskLBL,img_dextran)
+                    z_slice = checkPorous.shape[0]
+                    avrMaskSize = z_slice * 0.5
+                    if np.mean(checkPorous[avrMaskSize]) >= 2800:# Here I want to scan The mean Z
+                    # Additional check to make sure no porous nuclei is segmented
+                        continue
+                else:
+                    
+                        pass          
+                
                 nucelus_IntenNorm = normalize_intensity(nucleus_Inten)
                 print("normalize_intensity")
                 nucelus_AdaptEq = exposure.equalize_adapthist(nucelus_IntenNorm, clip_limit=0.03)
