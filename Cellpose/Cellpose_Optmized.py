@@ -253,6 +253,37 @@ def connected_components_labeling_box(binary_input):
     binary_input = binary_input.astype('int32')
     labeled_array, num_labels = ndimage.label(binary_input)
     return labeled_array
+    
+def threshold_binary_image(image, min_threshold_mean, min_threshold_std):
+
+    if img_mean >= min_threshold_mean and img_std <= min_threshold_std:
+        binary_image = nsitk.threshold_otsu(image)
+        return binary_image, "Otsu"
+    elif img_std >= min_threshold_std:
+        binary_image = nsitk.threshold_maximum_entropy(image)
+        return binary_image, "Max entropy"
+    else:
+        return None, "No actin present"
+
+def get_actin_coverage(act_obj, nuc_EdgThin_Ar):
+    Coverage = []
+    actin_coverage = 0.0
+    for act_Z, nucl_Z in zip(act_obj, nuc_EdgThin_Ar):
+        ratio = np.sum(act_Z) / np.sum(nucl_Z)
+        if np.sum(nucl_Z) != 0 and np.sum(act_Z) != 0:
+            if 1 < ratio < 1.6:
+                Coverage.append(100)
+            elif ratio < 1:
+                Coverage.append(ratio * 100)
+            else:
+                Coverage.append(0)
+
+    coverage_values = [value for value in Coverage if value is not None and not np.isnan(value) and value != 0]
+
+    if coverage_values:
+        actin_coverage = sum(coverage_values) / len(coverage_values)
+
+    return actin_coverage
 
 #folder_path = 'E:/Quantified/eNUC Live/230628 enuc vca vs novca/Test_Center/toGenerateMask_Cellpose/'
 #get_files = folder_scan(folder_path)
@@ -363,9 +394,7 @@ for folder_name in folder_list:
         for lbl_count in np.unique(label_OrgCnt)[1:]:
             
             if label_counts[lbl_count] >= 100000:# 100000from 120um3 min nuclei I expect / 0.0351435*2
-
                 print('lbl_count >>>>', lbl_count)
-    
                 maskLBL = label_OrgCnt == lbl_count
                 nucleus_Inten = replace_intensity(maskLBL,img_nuclei)
                 print("Nucleus Intensity")
@@ -377,10 +406,8 @@ for folder_name in folder_list:
                     if np.mean(checkPorous[avrMaskSize]) >= 2800:# Here I want to scan The mean Z
                     # Additional check to make sure no porous nuclei is segmented
                         continue
-                else:
-                    
-                        pass          
-                
+                else:                    
+                        pass                          
                 nucelus_IntenNorm = normalize_intensity(nucleus_Inten)
                 print("normalize_intensity")
                 nucelus_AdaptEq = exposure.equalize_adapthist(nucelus_IntenNorm, clip_limit=0.03)
@@ -485,152 +512,48 @@ for folder_name in folder_list:
                     print('Mean Actin Intensity >>>>', img_mean)
                     img_std = np.std(actin_img)
                     print('Std Actin Intensity >>>>', img_std)
-            
-                #######
-                # View Segmentation
-                #######
-                # viewer = napari.Viewer()
-                # viewer.add_image(nucleus_Inten)  
-                # viewer.add_image(nucelus_AdaptEq)
-                # viewer.add_image(nuc_EdgThin_Ar)
-                # #viewer.add_labels(Chromo_Thres_Inter1)
-                # viewer.add_labels(Chromo_Thres_Inter2)
-                # #viewer.add_labels(Chromo_Thres_Inter3)
-                # viewer.add_image(actin_img_N)
-                # viewer.add_image(actin_adapteq)
-        
+                    
                     image2_Blur = cle.gaussian_blur(actin_adapteq, None, 2.0, 2.0, 0.0)
                     image2_Gaus = nsitk.white_top_hat(image2_Blur, 10, 10, 0)
                     print('>> Pre Filtering Actin <<')
-                    if img_mean >= min_threshold_mean and img_std <= min_threshold_std:
-                        actin_binary = nsitk.threshold_otsu(image2_Gaus)
-                        print("Ostu")
-
-                        act_obj = np.zeros(img_nuclei.shape)
-
-                    # Apply Otsu thresholding
-                    ####################
-                    # Condition to remove background Actin segmentation
                     
-                        opImBase = img_nuclei[0,:,:]        
-            
-                        for i in range(actin_binary.shape[0]):
-                            prune = pruneSkeleton(actin_binary[i], opImBase)
-                            act_obj[i] = prune
-                         
-                    #######
-                    # View Segmentation
-                    #######
-                    #viewer.add_image(act_obj)
-                
-                    # Compute the standard deviation for each slice in the binary mask
-                        std_per_slice = np.std(act_obj, axis=(1, 2))
-
-                    # Calculate the ratio of the first and second value of the standard deviation
-                        ratio = std_per_slice[0] / std_per_slice[1]
-
-                    # Find the indices of slices that have a ratio higher than a threshold
-                        threshold_ratio = 5.0  # Set your desired threshold ratio here
-                        indices_to_remove = np.where(std_per_slice[1:] / std_per_slice[:-1] > threshold_ratio)[0]  + 1
-
-                    # Set the values of the slices to zero instead of deleting them
-                        act_obj[indices_to_remove] = 0
-        
-                    # Write statistics to Excel file
-                        statistics_Actin =  cle.statistics_of_labelled_pixels(img_actin, actin_binary)    
+                    actin_binary, threshold_method = threshold_binary_image(image2_Gaus, min_threshold_mean, min_threshold_std)
+                    print(threshold_method)
                     
-                        print("Actin Found")
-                
+                    opImBase = img_nuclei[0,:,:]        
+                                
+                    for i in range(actin_binary.shape[0]):
+                        prune = pruneSkeleton(actin_binary[i], opImBase)
+                        act_obj[i] = prune
+                    # All the thinning operations are not uniform in top and bottom slices
+                    # I decided to ignore those cases but I consider them in the slices
+                    # Considering normal slice with actin and top/bottom slices with actin will have more threads
+                    # then here is 
+                    std_per_slice = np.std(act_obj, axis=(1, 2))
+                    ratio = std_per_slice[0] / std_per_slice[1]
+                    threshold_ratio = 5.0  #  threshold ratio 
+                    indices_to_remove = np.where(std_per_slice[1:] / std_per_slice[:-1] > threshold_ratio)[0]  + 1
+                    act_obj[indices_to_remove] = 1
 
-                        Coverage = []
-                        for act_Z, nucl_Z in zip(act_obj, nuc_EdgThin_Ar):
-                            ratio = np.sum(act_Z) / np.sum(nucl_Z)
-                            if np.sum(nucl_Z) != 0 and np.sum(act_Z) != 0:
-                                if ratio > 1 and ratio < 1.6:#ratio <= 100:
-                                    Coverage.append(100)
-                                elif ratio < 1:
-                                    Coverage.append(ratio * 100)                                
-                                else:
-                                    Coverage.append(0)
-            
-                                coverage_values = [value for value in Coverage if value is not None and not np.isnan(value) and value != 0]
+                    # Write Actin statistics to Excel file
+                    statistics_Actin =  cle.statistics_of_labelled_pixels(img_actin, actin_binary)    
 
-                                if coverage_values:
-                                    actin_coverage = sum(coverage_values) / len(coverage_values)
-                                else:
-                                    actin_coverage = 0.0
-                        
-                        print("Actin Coverage:", actin_coverage)
-                        statistics_Actin['Actin Coverage'] = actin_coverage 
+                    print("Actin Found")
+                    actin_coverage = get_actin_coverage(act_obj, nuc_EdgThin_Ar)                        
+                    
+                    print("Actin Coverage:", actin_coverage)
+                    statistics_Actin['Actin Coverage'] = actin_coverage 
                         
                     ### Save the Actin Mask
-                        prediction_stack_32 = img_as_float32(actin_binary, force_copy=False)     
-                        os.chdir(Result_folder)
-                        imwrite("(Actin)_"+filename+".tif", prediction_stack_32)                    
-                        pd.DataFrame(statistics_Actin).to_excel('(Actin)_' + filename + '_' + str(lbl_count) + '.xlsx')             
-            
-                    elif img_std >= min_threshold_std:
-                        actin_binary = nsitk.threshold_maximum_entropy(image2_Gaus)
-                #viewer.add_image(actin_img)
-                        print("Max entropy")
-            
-                        opImBase = img_nuclei[0,:,:]        
-            
-                        for i in range(actin_binary.shape[0]):
-                            prune = pruneSkeleton(actin_binary[i], opImBase)
-                            act_obj[i] = prune
-                    
-                    #######
-                    # View Segmentation
-                    #######
-                    #viewer.add_image(act_obj)
-                    # Compute the standard deviation for each slice in the binary mask
-                        std_per_slice = np.std(act_obj, axis=(1, 2))
-
-                    # Calculate the ratio of the first and second value of the standard deviation
-                        ratio = std_per_slice[0] / std_per_slice[1]
-
-                    # Find the indices of slices that have a ratio higher than a threshold
-                        threshold_ratio = 5.0  # Set your desired threshold ratio here
-                        indices_to_remove = np.where(std_per_slice[1:] / std_per_slice[:-1] > threshold_ratio)[0]  + 1
-
-                    # Set the values of the slices to zero instead of deleting them
-                        act_obj[indices_to_remove] = 0
-
-                        statistics_Actin =  cle.statistics_of_labelled_pixels(img_actin, actin_binary)    
-
-                        print("Actin Found")
-
-                        Coverage = []
-                        for act_Z, nucl_Z in zip(act_obj, nuc_EdgThin_Ar):
-                            ratio = np.sum(act_Z) / np.sum(nucl_Z)
-                            if np.sum(nucl_Z) != 0 and np.sum(act_Z) != 0:
-                                if ratio > 1 and ratio < 1.6:#ratio <= 100:
-                                    Coverage.append(100)
-                                elif ratio < 1:
-                                    Coverage.append(ratio * 100)                                
-                                else:
-                                    Coverage.append(0)
-            
-                                coverage_values = [value for value in Coverage if value is not None and not np.isnan(value) and value != 0]
-
-                                if coverage_values:
-                                    actin_coverage = sum(coverage_values) / len(coverage_values)
-                                else:
-                                    actin_coverage = 0.0
-
-                        print("Actin Coverage:", actin_coverage)
-                        statistics_Actin['Actin Coverage'] = actin_coverage   
-                    
-                        ### Save the Actin Mask
-                        prediction_stack_32 = img_as_float32(actin_binary, force_copy=False)     
-                        os.chdir(Result_folder)
-                        imwrite("(Actin)_"+filename+".tif", prediction_stack_32)            
-                        pd.DataFrame(statistics_Actin).to_excel('(Actin)_' + filename + '_' + str(lbl_count) + '.xlsx')
-                                
-                    else:
+                    prediction_stack_32 = img_as_float32(actin_binary, force_copy=False)     
+                    os.chdir(Result_folder)
+                    imwrite("(Actin)_"+filename+".tif", prediction_stack_32)                    
+                    pd.DataFrame(statistics_Actin).to_excel('(Actin)_' + filename + '_' + str(lbl_count) + '.xlsx')             
+                        
+                else:
                     #actin_binary = nsitk.threshold_maximum_entropy(image2_Gaus)
-                        print("No actin present")
+                    print("No actin present")
+
 
 # Close the log file
 #log_file.close()
