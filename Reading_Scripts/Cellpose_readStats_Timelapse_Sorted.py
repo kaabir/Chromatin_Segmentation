@@ -167,7 +167,12 @@ for actinread in ActinFilesT1:
     #     stats_Actin["Actin_coverage_T30"].append(None) 
         
 df_Actin = pd.DataFrame.from_dict(stats_Actin, orient='index')
-df_Actin = df_Actin.transpose()         
+df_Actin = df_Actin.transpose()    
+
+filterChromo = (df_Actin['Actin_chromo_volume_T0'] > 25) | (df_Actin['Actin_chromo_volume_T1'] > 25)
+df_Actin.loc[filterChromo, ['Actin_chromo_volume_T0', 'Actin_chromo_volume_T1']] = 0
+
+pd.DataFrame(df_Actin).to_excel(folder_Path + '/Export_Actin_Excel.xlsx')  
 
 ###########################
 #    Ctrl    Reading      #
@@ -220,6 +225,11 @@ for chromo_read in ChromoFilesT1:
      
 df_Ctrl = pd.DataFrame.from_dict(stats_Ctrl, orient='index')
 df_Ctrl = df_Ctrl.transpose()  
+
+filterChromo = (df_Ctrl['Ctrl_chromo_volume_T0'] > 25) | (df_Ctrl['Ctrl_chromo_volume_T1'] > 25)
+df_Ctrl.loc[filterChromo, ['Ctrl_chromo_volume_T0', 'Ctrl_chromo_volume_T1']] = 0
+
+pd.DataFrame(df_Ctrl).to_excel(folder_Path + '/Export_Ctrl_Excel.xlsx') 
 # =============================================================================
 # # Filter out the incorrectly Segmented Chromo on T0
 # filterChromo = df_Actin['Actin_chromo_volume_T1'] > 25
