@@ -8,6 +8,7 @@ import glob
 import os
 import csv
 from pathlib import Path
+import re
 """ 
 Output
 ├── Ctrl
@@ -25,13 +26,13 @@ Output
     └── T30...
 """
 
-stats_Actin = {"File_Name_Actin":[],"Actin_chromo_volume_T0":[],"Actin_chromo_volume_T1":[],"Actin_chromo_volume_T2":[],
+stats_Actin = {"File_Number_Actin":[], "File_Name_Actin":[],"Actin_chromo_volume_T0":[],"Actin_chromo_volume_T1":[],"Actin_chromo_volume_T2":[],
                       "Actin_chromo_intensity_T0":[],"Actin_chromo_intensity_T1":[],"Actin_chromo_intensity_T2":[],
           "Nuclei_volume_actin_T0":[],"Nuclei_volume_actin_T1":[],"Nuclei_volume_actin_T2":[],
 		  "Nuclei_intensity_actin_T0":[],"Nuclei_intensity_actin_T1":[],"Nuclei_intensity_actin_T2":[],
 		  "Actin_coverage_T30":[],"Actin_coverage_T60":[],"sphericity_Actin_T0":[],"sphericity_Actin_T1":[],"sphericity_Actin_T2":[]}
 
-stats_Ctrl = {"File_Name_Ctrl":[],"Ctrl_chromo_volume_T0":[],"Ctrl_chromo_volume_T1":[],"Ctrl_chromo_volume_T2":[],
+stats_Ctrl = {"File_Number_Ctrl":[],"File_Name_Ctrl":[],"Ctrl_chromo_volume_T0":[],"Ctrl_chromo_volume_T1":[],"Ctrl_chromo_volume_T2":[],
            "Ctrl_chromo_intensity_T0":[],"Ctrl_chromo_intensity_T1":[],"Ctrl_chromo_intensity_T2":[],
            "Nuclei_volume_ctrl_T0":[],"Nuclei_volume_ctrl_T1":[],"Nuclei_volume_ctrl_T2":[],
 		   "Nuclei_intensity_ctrl_T0":[],"Nuclei_intensity_ctrl_T1":[],"Nuclei_intensity_ctrl_T2":[],
@@ -121,9 +122,16 @@ ActinFilesT1 = sorted(ActinFilesT1)
 for nucleusread in NucleusFilesT0:
     df = pd.read_excel(nucleusread)
     file_name = nucleusread.split("(Nucleus)_")[1].split(".")[0].strip()
-    stats_Actin["File_Name_Actin"].append(file_name)
+    stats_Actin["File_Name_Actin"].append(file_name)      
     stats_Actin["Nuclei_volume_actin_T0"].append(df.loc[0,'Nucleus Area'])
     stats_Actin["Nuclei_intensity_actin_T0"].append(df.iloc[0, df.columns.get_loc('mean_intensity')])
+
+# Just saving File Number for Plots    
+for digitread in stats_Actin["File_Name_Actin"]:   
+    match = re.search(r' #\d+_\d+', digitread)
+    if match:
+        number = match.group(0)
+        stats_Actin["File_Number_Actin"].append(number)  
     
 # Actin T30             
 for nucleusread in NucleusFilesT1:
@@ -195,6 +203,13 @@ for nucleusread in NucleusFilesT0:
     stats_Ctrl["File_Name_Ctrl"].append(file_name)
     stats_Ctrl["Nuclei_volume_ctrl_T0"].append(df.loc[0,'Nucleus Area'])
     stats_Ctrl["Nuclei_intensity_ctrl_T0"].append(df.iloc[0, df.columns.get_loc('mean_intensity')])
+
+# Just saving File Number for Plots    
+for digitread in stats_Ctrl["File_Name_Ctrl"]:   
+    match = re.search(r' #\d+_\d+', digitread)
+    if match:
+        number = match.group(0)
+        stats_Ctrl["File_Number_Ctrl"].append(number) 
 
 # Ctrl Nucleus Read T30        
 for nucleusread in NucleusFilesT1:
