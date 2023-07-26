@@ -305,6 +305,7 @@ for folder_name in folder_list:
     px_to_um_X = 0.0351435
     px_to_um_Y = 0.0351435
     px_to_um_Z = 1 #1.0/0.0351435 # making pixels isotropic
+    min_NUC_Size = px_to_um_X * px_to_um_X
 
     for image in get_files:
 
@@ -393,7 +394,7 @@ for folder_name in folder_list:
         print("Number of Unique mask Found", np.unique(label_OrgCnt)[1:])
         for lbl_count in np.unique(label_OrgCnt)[1:]:
             
-            if label_counts[lbl_count] >= 100000:# 100000from 120um3 min nuclei I expect / 0.0351435*2
+            if label_counts[lbl_count] >= 120/min_NUC_Size:# 100000from 120um3 min nuclei I expect / 0.0351435*2
                 print('lbl_count >>>>', lbl_count)
                 maskLBL = label_OrgCnt == lbl_count
                 nucleus_Inten = replace_intensity(maskLBL,img_nuclei)
