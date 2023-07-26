@@ -497,7 +497,20 @@ for folder_name in folder_list:
                 if 'img_actin' in globals() and img_actin is not None:    
                     
                     act_obj = np.zeros(img_actin.shape)
-                
+                    
+                    # To verify in some case it is not Dextran instead
+                    # z_slice = img_actin.shape[0]
+                    # avrMaskSize = int(z_slice * 0.5)
+                    # checkDextran = np.mean(img_actin[avrMaskSize])
+                    # print('checkDextran >>>>', checkDextran)
+                    # if checkDextran > 2800:# Here I want to scan The mean Z
+                    # # Additional check to dextran not in Actin channel
+                    #     print(">> It is Dextran not Actin <<")
+                    #     print(">> Skipping <<")
+                    #     continue
+                    # else:                    
+                    #     pass                    
+                    
                     dilated = ndimage.binary_dilation(maskLBL, diamond, iterations=10).astype(maskLBL.dtype)
                     actin_img = replace_intensity(dilated, img_actin)
                     actin_img_N = normalize_intensity(actin_img)
@@ -553,10 +566,13 @@ for folder_name in folder_list:
                         pd.DataFrame(statistics_Actin).to_excel('(Actin)_' + filename + '_' + str(lbl_count) + '.xlsx')             
                         
                     else:
-                    
+                        prediction_stack_32 = img_as_float32(actin_img, force_copy=False) 
+                        os.chdir(Result_folder)
+                        imwrite("(UnSegmented_Actin)_"+filename+".tif", prediction_stack_32)
                         #actin_binary = nsitk.threshold_maximum_entropy(image2_Gaus)
                         print("No actin present")
-
+                        
+        img_actin = None # Because Actin is changing in case we switch from Ctrl
 
 
 # Close the log file
