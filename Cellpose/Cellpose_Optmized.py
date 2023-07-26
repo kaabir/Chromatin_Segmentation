@@ -493,8 +493,8 @@ for folder_name in folder_list:
             
                 nuc_EdgThin_Ar = np.array(nuc_EdgThin)
 
-                # Actin Segmentation
-                if 'img_actin' in globals():
+                if 'img_actin' in globals() and img_actin is not None:    
+                    
                     act_obj = np.zeros(img_actin.shape)
                 
                     dilated = ndimage.binary_dilation(maskLBL, diamond, iterations=10).astype(maskLBL.dtype)
@@ -521,38 +521,41 @@ for folder_name in folder_list:
                     print(threshold_method)
                     
                     opImBase = img_nuclei[0,:,:]        
-                                
-                    for i in range(actin_binary.shape[0]):
-                        prune = pruneSkeleton(actin_binary[i], opImBase)
-                        act_obj[i] = prune
-                    # All the thinning operations are not uniform in top and bottom slices
-                    # I decided to ignore those cases but I consider them in the slices
-                    # Considering normal slice with actin and top/bottom slices with actin will have more threads
-                    # then here is 
-                    std_per_slice = np.std(act_obj, axis=(1, 2))
-                    ratio = std_per_slice[0] / std_per_slice[1]
-                    threshold_ratio = 5.0  #  threshold ratio 
-                    indices_to_remove = np.where(std_per_slice[1:] / std_per_slice[:-1] > threshold_ratio)[0]  + 1
-                    act_obj[indices_to_remove] = 1
+                    if actin_binary is not None:
+                        
+                        for i in range(actin_binary.shape[0]):
+                            prune = pruneSkeleton(actin_binary[i], opImBase)
+                            act_obj[i] = prune
+                            # All the thinning operations are not uniform in top and bottom slices
+                            # I decided to ignore those cases but I consider them in the slices
+                            # Considering normal slice with actin and top/bottom slices with actin will have more threads
+                            # then here is                         
+                        std_per_slice = np.std(act_obj, axis=(1, 2))
+                        ratio = std_per_slice[0] / std_per_slice[1]
+                        threshold_ratio = 5.0  #  threshold ratio 
+                        indices_to_remove = np.where(std_per_slice[1:] / std_per_slice[:-1] > threshold_ratio)[0]  + 1
+                        act_obj[indices_to_remove] = 1
 
-                    # Write Actin statistics to Excel file
-                    statistics_Actin =  cle.statistics_of_labelled_pixels(img_actin, actin_binary)    
+                        # Write Actin statistics to Excel file
+                        statistics_Actin =  cle.statistics_of_labelled_pixels(img_actin, actin_binary)    
 
-                    print("Actin Found")
-                    actin_coverage = get_actin_coverage(act_obj, nuc_EdgThin_Ar)                        
+                        print("Actin Found")
+                        actin_coverage = get_actin_coverage(act_obj, nuc_EdgThin_Ar)                        
                     
-                    print("Actin Coverage:", actin_coverage)
-                    statistics_Actin['Actin Coverage'] = actin_coverage 
+                        print("Actin Coverage:", actin_coverage)
+                        statistics_Actin['Actin Coverage'] = actin_coverage 
                         
-                    ### Save the Actin Mask
-                    prediction_stack_32 = img_as_float32(actin_binary, force_copy=False)     
-                    os.chdir(Result_folder)
-                    imwrite("(Actin)_"+filename+".tif", prediction_stack_32)                    
-                    pd.DataFrame(statistics_Actin).to_excel('(Actin)_' + filename + '_' + str(lbl_count) + '.xlsx')             
+                        ### Save the Actin Mask
+                        prediction_stack_32 = img_as_float32(actin_binary, force_copy=False)     
+                        os.chdir(Result_folder)
+                        imwrite("(Actin)_"+filename+".tif", prediction_stack_32)                    
+                        pd.DataFrame(statistics_Actin).to_excel('(Actin)_' + filename + '_' + str(lbl_count) + '.xlsx')             
                         
-                else:
-                    #actin_binary = nsitk.threshold_maximum_entropy(image2_Gaus)
-                    print("No actin present")
+                    else:
+                    
+                        #actin_binary = nsitk.threshold_maximum_entropy(image2_Gaus)
+                        print("No actin present")
+
 
 
 # Close the log file
