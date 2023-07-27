@@ -410,22 +410,26 @@ for folder_name in folder_list:
                 else:                    
                         pass                          
                 nucelus_IntenNorm = normalize_intensity(nucleus_Inten)
-                print("normalize_intensity")
-                nucelus_AdaptEq = exposure.equalize_adapthist(nucelus_IntenNorm, clip_limit=0.03)
-                print("equalize_adapthist")
-                nucelus_GB = nsitk.gaussian_blur(nucelus_AdaptEq, 2.0, 2.0, 0.0)
-                nucelus_OT = nsitk.threshold_otsu(nucelus_GB)
-                print("Threshold Otsu")
+                print("Nucleus ->  normalize_intensity")
+                # nucelus_AdaptEq = exposure.equalize_adapthist(nucelus_IntenNorm, clip_limit=0.03)
+                # print("equalize_adapthist")
+                # nucelus_GB = nsitk.gaussian_blur(nucelus_AdaptEq, 2.0, 2.0, 0.0)
+                # nucelus_OT = nsitk.threshold_otsu(nucelus_GB)
+                # print("Threshold Otsu")
                 # Chromo_SGB = cle.subtract_gaussian_background(nucelus_GB, None, 10.0, 10.0, 0.0)            
                 # Chromo_Thres_Inter = nsitk.threshold_intermodes(Chromo_SGB)
                 
-                structuring_element = generate_binary_structure(nucelus_OT.ndim, 3)
-        
-                nucelus_FLH1 = fill_large_hole(nucelus_OT)
-                print("Nucleus Fill Large Holes")
-                nucelus_FLH2 = fill_large_hole(nucelus_FLH1)#.astype(int)
-
-                print("Nucleus Fill Large Holes 2")    
+                nucelus_GB = nsitk.gaussian_blur(nucelus_OrgNorm, 2.0, 2.0, 0.0)
+                nucelus_GC = cle.gamma_correction(nucelus_GB, None, 1.0)
+                nucelus_OT = cle.threshold_otsu(nucelus_GC)
+                print("Nucleus ->  Threshold Otsu")
+                nucelus_CL = cle.closing_labels(nucelus_OT, None, 1.0)
+                nucelus_BF = nsitk.binary_fill_holes(nucelus_CL)
+                nucelus_FLH = fill_large_hole(nucelus_BF)
+                print("Nucleus -> Fill Binary Mask")
+                nucleus_Trim = replace_intensity(nucelus_FLH,img_nuclei)
+                
+                nucelus_TrimNorm = normalize_intensity(nucleus_Trim) 
                 # # Nucleus Segmentation
         
                 statistics_nucleus = cle.statistics_of_labelled_pixels(img_nuclei, nucelus_FLH2)    
@@ -455,34 +459,40 @@ for folder_name in folder_list:
                 
                 # Chromocenter Segmentation # Approach 2
                 # Normalized Nucleus, Max Filter, Max entropy
-                Chromo_GB = cle.gaussian_blur(nucelus_IntenNorm, None, 2.0, 2.0, 0.0)
+                # Chromo_GB = cle.gaussian_blur(nucelus_IntenNorm, None, 2.0, 2.0, 0.0)
                 # maximum filter
-                Chromo_THB = nsbatwm.maximum_filter(Chromo_GB, 0.0)
+                # Chromo_THB = nsbatwm.maximum_filter(Chromo_GB, 0.0)
                 # threshold maximum entropy
-                Chromo_Thres_Inter2 = nsitk.threshold_maximum_entropy(Chromo_THB)
+                # Chromo_Thres_Inter2 = nsitk.threshold_maximum_entropy(Chromo_THB)
                 
-                # # Chromocenter Segmentation # Approach 3
-                # # Adaptive Thresholding to Intermodes
-                # Chromo_GB = cle.gaussian_blur(nucelus_AdaptEq, None, 2.0, 2.0, 0.0) # 'nucelus_AdaptEq'
-                # # top hat box
+                Chromo_GB = cle.gaussian_blur(nucelus_OrgNorm, None, 2.0, 2.0, 0.0)
+                # maximum filter
                 # Chromo_THB = cle.top_hat_box(Chromo_GB, None, 15.0, 15.0, 0.0)
-                # # threshold intermodes
-                # Chromo_Thres_Inter3 = nsitk.threshold_intermodes(Chromo_THB)
+                # Chromo_SGB = cle.subtract_gaussian_background(Chromo_THB, None, 10.0, 10.0, 0.0)
                 
-                Chromo_Thres_Inter_Comb = cle.connected_components_labeling_box(Chromo_Thres_Inter2)
-                statistics_Chromo = cle.statistics_of_labelled_pixels(img_nuclei, Chromo_Thres_Inter_Comb)                 
-                intermodes_chromo_Area = np.sum(statistics_Chromo['area'], axis=0)
+                try:              
+                    # threshold Intermodes entropy
+                    Chromo_Thres_Inter2 = nsitk.threshold_intermodes(Chromo_SGB)
+                    Chromo_Thres_Inter_Comb = cle.connected_components_labeling_box(Chromo_Thres_Inter2)
+                    statistics_Chromo = cle.statistics_of_labelled_pixels(img_nuclei, Chromo_Thres_Inter_Comb)                 
+                    intermodes_chromo_Area = np.sum(statistics_Chromo['area'], axis=0)
                 
-                #intermodes_chromo_Area = statistics_Chromo.loc[0, 'number_of_pixels']
-                chromointermodes_Area = intermodes_chromo_Area *px_to_um_X* px_to_um_Y
-                statistics_Chromo['Chromocenter Area'] = chromointermodes_Area 
-                print('Chromocenter_Area >>>>', chromointermodes_Area)
+                    #intermodes_chromo_Area = statistics_Chromo.loc[0, 'number_of_pixels']
+                    chromointermodes_Area = intermodes_chromo_Area *px_to_um_X* px_to_um_Y
+                    statistics_Chromo['Chromocenter Area'] = chromointermodes_Area 
+                    print('Chromocenter_Area >>>>', chromointermodes_Area)        
+                    
+                    ### Save the Chromocenter Mask
+                    prediction_stack_32 = img_as_float32(Chromo_Thres_Inter2, force_copy=False)     
+                    os.chdir(Result_folder)
+                    imwrite("(Chromocenter)_"+filename+".tif", prediction_stack_32)                            
+                    pd.DataFrame(statistics_Chromo).to_excel('(Chromo)_' + filename + '_' + str(lbl_count)+'.xlsx')   
 
-                ### Save the Chromocenter Mask
-                prediction_stack_32 = img_as_float32(Chromo_Thres_Inter2, force_copy=False)     
-                os.chdir(Result_folder)
-                imwrite("(Chromocenter)_"+filename+".tif", prediction_stack_32)                            
-                pd.DataFrame(statistics_Chromo).to_excel('(Chromo)_' + filename + '_' + str(lbl_count)+'.xlsx')   
+                    
+                except RuntimeError:
+                    
+                    print("No Chromocenter Found")
+                    statistics_Chromo['Chromocenter Area'] = None
             
                 nuc_EdgThin = np.zeros(img_nuclei.shape)
                 
