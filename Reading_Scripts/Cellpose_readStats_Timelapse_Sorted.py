@@ -79,6 +79,21 @@ def matchingFiles(sortedCells, sourceCells, sortedMarker=None, sourceMarker=None
 
     return matching_files
 
+# =============================================================================
+# def matchingFiles(sortedCells, sourceCells, sortedMarker=None, sourceMarker=None):
+#     # Collect identifiers from sortedCells
+#     identifiers = [temp_files.split(sortedMarker)[1].split(".")[0].strip().replace("T0", "T30") for temp_files in sortedCells if sortedMarker in temp_files]
+# 
+#     # Create a set of source files without the markers
+#     source_files_set = {source_file.split(sourceMarker)[1].split(".")[0].strip() for source_file in sourceCells if sourceMarker and sourceMarker in source_file}
+# 
+#     # Find matching files based on identifiers and source files
+#     matching_files = [source_file for source_file in sourceCells if sourceMarker and sourceMarker in source_file and source_file.split(sourceMarker)[1].split(".")[0].strip() in identifiers]
+# 
+#     return matching_files
+# =============================================================================
+
+
 # Sorting Files
 
 def folder_scan(directory, extension, marker=None, Key=str()):
@@ -100,6 +115,7 @@ def folder_scan(directory, extension, marker=None, Key=str()):
     except FileNotFoundError:
         print(">>> This Folder Not Present", Key)
         print(final_dir)
+        
 
 # Main Folder
 folder_Path = "E:/Quantified/eNUC Staining/230406 OF1 D1 Actin 10uMVCA Gactin RH3K9me2 FRH3K27me2/Result/"
@@ -165,7 +181,7 @@ for h3k9me2read in H3K9me2Files:
         h3k9me2_data[file_name] = 'None'
 
 # After processing all files, append the values to the 'stats_Actin' DataFrame
-stats_Actin["H3K9me2_Intensity_actin_T0"] = [h3k27me3_data.get(file_name, 'None') for file_name in stats_Actin["File_Name_Actin"]]        
+stats_Actin["H3K9me2_Intensity_actin_T0"] = [h3k9me2_data.get(file_name, 'None') for file_name in stats_Actin["File_Name_Actin"]]        
 
 
 # Chromocenter 
@@ -213,16 +229,26 @@ for actinread in ActinFiles:
 # After processing all files, append the values to the 'stats_Actin' DataFrame
 stats_Actin["Actin_coverage_T30"] = [actin_data.get(file_name, 'None') for file_name in stats_Actin["File_Name_Actin"]]        
 
+
+
 df_Actin = pd.DataFrame.from_dict(stats_Actin, orient='index')
 df_Actin = df_Actin.transpose()    
+
+mask_non_none = df_Actin['Actin_coverage_T30'] != 'None'
+# Step 2: Filter the DataFrame to extract rows with non-'None' values
+df_non_none = df_Actin[mask_non_none]
+# Step 3: Append the rows with 'None' values at the end
+df_arranged = pd.concat([df_non_none, df_Actin[~mask_non_none]])
+# Optional: Reset the index of the DataFrame if needed
+df_arranged.reset_index(drop=True, inplace=True)
 
 # filterChromo = (df_Actin['Nuclei_volume_actin_T0'] < 120)
 # df_Actin.loc[filterChromo, ['Nuclei_volume_actin_T0']] = 0
 
-filterChromo = df_Actin['Nuclei_volume_actin_T0'] < 120
-df_Actin = df_Actin.drop(df_Actin.index[filterChromo])
+filterChromo = df_arranged['Nuclei_volume_actin_T0'] < 120
+df_arranged = df_arranged.drop(df_Actin.index[filterChromo])
 
-pd.DataFrame(df_Actin).to_excel(folder_Path + '/Export_Actin_Excel.xlsx')  
+pd.DataFrame(df_arranged).to_excel(folder_Path + '/Export_Actin_Excel.xlsx')  
 
 # ###########################
 # #    Ctrl    Reading      #
@@ -306,6 +332,10 @@ for h3k27me3read in H3K27me3Files:
 # After processing all files, append the values to the 'stats_Actin' DataFrame
 stats_Ctrl["H3K27me3_Intensity_ctrl_T0"] = [h3k27me3_data.get(file_name, 'None') for file_name in stats_Ctrl["File_Name_Ctrl"]]        
 
+# for h3k27me3read in H3K27me3Files:
+#     df = pd.read_excel(h3k27me3read)  
+#     stats_Ctrl["H3K27me3_Intensity_ctrl_T0"].append(df.iloc[0, df.columns.get_loc('mean_intensity')])
+
 h3k9me2_data= {}
 
 for h3k9me2read in H3K9me2Files:
@@ -321,7 +351,9 @@ for h3k9me2read in H3K9me2Files:
         h3k9me2_data[file_name] = 'None'
 
 # After processing all files, append the values to the 'stats_Actin' DataFrame
-stats_Ctrl["H3K9me2_Intensity_ctrl_T0"] = [h3k27me3_data.get(file_name, 'None') for file_name in stats_Ctrl["File_Name_Ctrl"]]        
+stats_Ctrl["H3K9me2_Intensity_ctrl_T0"] = [h3k9me2_data.get(file_name, 'None') for file_name in stats_Ctrl["File_Name_Ctrl"]]        
+
+
 
 df_Ctrl = pd.DataFrame.from_dict(stats_Ctrl, orient='index')
 df_Ctrl = df_Ctrl.transpose()  
