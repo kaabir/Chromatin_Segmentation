@@ -2,13 +2,27 @@
 """
 Created on Tue Jul  4 11:10:42 2023
 
-@author: kaabir
+@author: kaabi
 """
 
 import os
 import pandas as pd
 import numpy as np
 
+
+# Main Folder
+folder_Path = "E:/Quantified/Agarose Compression/20221103 IF OF1 D1 H3K9me3 FOP FOXJ1/Result/Overnight/Agarose"
+# Cell Type Folder
+rgc_Folder = folder_Path + "/01-RGC/"
+halo_Folder = folder_Path + "/02-Halo/"
+flower_Folder = folder_Path + "/03-Flower/"
+multi_Folder = folder_Path + "/04-Multi/"
+# Cell Marker Folder
+chromo_Folder = folder_Path + "/Chromo/"
+nucleus_Folder = folder_Path + "/Nucleus/"
+h3k27me3_Folder = folder_Path + "/H3K27me3/"
+foxj_Folder = folder_Path + "/FoxJ/"
+fop_Folder = folder_Path + "/FOP/"
 
 def folder_scan(directory, extension, marker=None):
     # folder_scan(chromo_folder, ".xlsx", marker="(Chromo)")
@@ -66,109 +80,36 @@ def matchingFiles(sortedCells, sourceCells,sortedMarker=None, sourceMarker=None)
                 #print(matching_files)                
     return matching_files   
 
+# Scan Folder for all relevant files
+chromo_Scan = folder_scan(chromo_Folder, ".xlsx", marker="(Chromo)_")
+nucleus_Scan = folder_scan(nucleus_Folder, ".xlsx", marker="(Nucleus)_")
+h3k27me3_Scan = folder_scan(h3k27me3_Folder, ".xlsx", marker="(H3K27me3)_")
+foxj_Scan = folder_scan(foxj_Folder, ".xlsx", marker="(FOXJ)_")
+fop_Scan = folder_scan(fop_Folder, ".xlsx", marker="(FOP)_")
+
+###########################
+#       RGC    Reading    #
+###########################
+# Scan Cell Type Folders
+rgc_Scan = folder_scan(rgc_Folder,".tif")
+
+# Find matching files
+ChromoFiles =  matchingFiles(rgc_Scan, chromo_Scan,sortedMarker=None, sourceMarker="(Chromo)_")
+
+NucleusFiles =  matchingFiles(ChromoFiles, nucleus_Scan, sortedMarker="(Chromo)_", sourceMarker="(Nucleus)_")
+H3k27me3Files = matchingFiles(ChromoFiles, h3k27me3_Scan, sortedMarker="(Chromo)_", sourceMarker="(H3K27me3)_")
+FoxjFiles = matchingFiles(ChromoFiles, foxj_Scan, sortedMarker="(Chromo)_", sourceMarker="(FOXJ)_")
+FopFiles = matchingFiles(ChromoFiles, fop_Scan, sortedMarker="(Chromo)_", sourceMarker="(FOP)_")
 
 # Dictionary to store the properties
-region_Prop_ctrl = {"ctrl_intens_H3k27me3":[],"ctrl_intens_FOP":[],"ctrl_intens_Nucleus":[],
-                    "ctrl_intens_Chromo":[]}
+# region_Prop_ctrl = {"ctrl_intens_H3k27me3":[],"ctrl_intens_FOP":[],"ctrl_intens_Nucleus":[],
+#                     "ctrl_intens_Chromo":[]}
 region_Prop_agar = {"agar_intens_H3k27me3":[],"agar_intens_FOP":[],"agar_intens_Nucleus":[],
                     "agar_intens_Chromo":[]}
 
-# Main Folder
-folder_Path = "E:/Quantified/Agarose Compression/20221103 IF OF1 D1 H3K9me3 FOP FOXJ1/Result/Overnight/Ctrl"
-# Cell Type Folder
-rgc_Folder = folder_Path + "/01-RGC/"
-halo_Folder = folder_Path + "/02-Halo/"
-flower_Folder = folder_Path + "/03-Flower/"
-multi_Folder = folder_Path + "/04-Multi/"
-# Cell Marker Folder
-chromo_Folder = folder_Path + "/Chromo/"
-nucleus_Folder = folder_Path + "/Nucleus/"
-h3k27me3_Folder = folder_Path + "/H3K27me3/"
-foxj_Folder = folder_Path + "/FoxJ/"
-fop_Folder = folder_Path + "/FOP/"
-
-# Scan Folder for all relevant files
-chromo_Scan = folder_scan(chromo_Folder, ".xlsx", marker="(Chromo)_")
-nucleus_Scan = folder_scan(nucleus_Folder, ".xlsx", marker="(Nucleus)_")
-h3k27me3_Scan = folder_scan(h3k27me3_Folder, ".xlsx", marker="(H3K27me3)_")
-foxj_Scan = folder_scan(foxj_Folder, ".xlsx", marker="(FOXJ)_")
-fop_Scan = folder_scan(fop_Folder, ".xlsx", marker="(FOP)_")
-
-# Scan Cell Type Folders
-rgc_Scan = folder_scan(rgc_Folder,".tif")
-
-# Find matching files
-ChromoFiles =  matchingFiles(rgc_Scan, chromo_Scan,sortedMarker=None, sourceMarker="(Chromo)_")
-
-NucleusFiles =  matchingFiles(ChromoFiles, nucleus_Scan, sortedMarker="(Chromo)_", sourceMarker="(Nucleus)_")
-H3k27me3Files = matchingFiles(ChromoFiles, h3k27me3_Scan, sortedMarker="(Chromo)_", sourceMarker="(H3K27me3)_")
-FoxjFiles = matchingFiles(ChromoFiles, foxj_Scan, sortedMarker="(Chromo)_", sourceMarker="(FOXJ)_")
-FopFiles = matchingFiles(ChromoFiles, fop_Scan, sortedMarker="(Chromo)_", sourceMarker="(FOP)_")
-
-
 ###########################
-#      Ctrl    Reading    #
+#      RGC    Reading    #
 ###########################
-
-for temp_read in NucleusFiles:
-    df = pd.read_excel(temp_read)
-    region_Prop_ctrl["ctrl_intens_Nucleus"].append(df.loc[0,'mean'])
-    
-for temp_read in H3k27me3Files:
-    df = pd.read_excel(temp_read)
-    region_Prop_ctrl["ctrl_intens_H3k27me3"].append(df.loc[0,'mean'])    
-    
-for temp_read in FopFiles:
-    df = pd.read_excel(temp_read)
-    region_Prop_ctrl["ctrl_intens_FOP"].append(df.loc[0,'mean'])    
-    
-for temp_read in ChromoFiles:
-    df = pd.read_excel(temp_read)
-    region_Prop_ctrl["ctrl_intens_Chromo"].append(df.loc[0,'mean']) 
-
-df_ctrl = pd.DataFrame.from_dict(region_Prop_ctrl, orient='index')
-df_ctrl = df_ctrl.transpose()
-pd.DataFrame(df_ctrl).to_excel(folder_Path + '/Export_Ctrl_Excel.xlsx')
-
-FopFiles.clear()
-FoxjFiles.clear()
-H3k27me3Files.clear()
-NucleusFiles.clear()
-
-###########################
-#   Agarose    Reading    #
-###########################
-# Main Folder
-folder_Path = "E:/Quantified/Agarose Compression/20221103 IF OF1 D1 H3K9me3 FOP FOXJ1/Result/Overnight/Agarose"
-# Cell Type Folder
-rgc_Folder = folder_Path + "/01-RGC/"
-halo_Folder = folder_Path + "/02-Halo/"
-flower_Folder = folder_Path + "/03-Flower/"
-multi_Folder = folder_Path + "/04-Multi/"
-# Cell Marker Folder
-chromo_Folder = folder_Path + "/Chromo/"
-nucleus_Folder = folder_Path + "/Nucleus/"
-h3k27me3_Folder = folder_Path + "/H3K27me3/"
-foxj_Folder = folder_Path + "/FoxJ/"
-fop_Folder = folder_Path + "/FOP/"
-
-# Scan Folder for all relevant files
-chromo_Scan = folder_scan(chromo_Folder, ".xlsx", marker="(Chromo)_")
-nucleus_Scan = folder_scan(nucleus_Folder, ".xlsx", marker="(Nucleus)_")
-h3k27me3_Scan = folder_scan(h3k27me3_Folder, ".xlsx", marker="(H3K27me3)_")
-foxj_Scan = folder_scan(foxj_Folder, ".xlsx", marker="(FOXJ)_")
-fop_Scan = folder_scan(fop_Folder, ".xlsx", marker="(FOP)_")
-
-# Scan Cell Type Folders
-rgc_Scan = folder_scan(rgc_Folder,".tif")
-
-# Find matching files
-ChromoFiles =  matchingFiles(rgc_Scan, chromo_Scan,sortedMarker=None, sourceMarker="(Chromo)_")
-
-NucleusFiles =  matchingFiles(ChromoFiles, nucleus_Scan, sortedMarker="(Chromo)_", sourceMarker="(Nucleus)_")
-H3k27me3Files = matchingFiles(ChromoFiles, h3k27me3_Scan, sortedMarker="(Chromo)_", sourceMarker="(H3K27me3)_")
-FoxjFiles = matchingFiles(ChromoFiles, foxj_Scan, sortedMarker="(Chromo)_", sourceMarker="(FOXJ)_")
-FopFiles = matchingFiles(ChromoFiles, fop_Scan, sortedMarker="(Chromo)_", sourceMarker="(FOP)_")
 
 for temp_read in NucleusFiles:
     df = pd.read_excel(temp_read)
@@ -188,4 +129,147 @@ for temp_read in ChromoFiles:
 
 df_agar = pd.DataFrame.from_dict(region_Prop_agar, orient='index')
 df_agar = df_agar.transpose()
-pd.DataFrame(df_agar).to_excel(folder_Path + '/Export_Agar_Excel.xlsx')
+pd.DataFrame(df_agar).to_excel(folder_Path + '/RGC_Agar_Excel.xlsx')
+
+region_Prop_agar.clear()
+
+###########################
+#  Halo_Folder    Reading #
+###########################
+# Scan Cell Type Folders
+halo_Scan = folder_scan(halo_Folder,".tif")
+
+# Find matching files
+ChromoFiles =  matchingFiles(halo_Scan, chromo_Scan,sortedMarker=None, sourceMarker="(Chromo)_")
+
+NucleusFiles =  matchingFiles(ChromoFiles, nucleus_Scan, sortedMarker="(Chromo)_", sourceMarker="(Nucleus)_")
+H3k27me3Files = matchingFiles(ChromoFiles, h3k27me3_Scan, sortedMarker="(Chromo)_", sourceMarker="(H3K27me3)_")
+FoxjFiles = matchingFiles(ChromoFiles, foxj_Scan, sortedMarker="(Chromo)_", sourceMarker="(FOXJ)_")
+FopFiles = matchingFiles(ChromoFiles, fop_Scan, sortedMarker="(Chromo)_", sourceMarker="(FOP)_")
+
+# Dictionary to store the properties
+# region_Prop_ctrl = {"ctrl_intens_H3k27me3":[],"ctrl_intens_FOP":[],"ctrl_intens_Nucleus":[],
+#                     "ctrl_intens_Chromo":[]}
+region_Prop_agar = {"agar_intens_H3k27me3":[],"agar_intens_FOP":[],"agar_intens_Nucleus":[],
+                    "agar_intens_Chromo":[]}
+
+###########################
+#  Halo   Reading #
+###########################
+
+for temp_read in NucleusFiles:
+    df = pd.read_excel(temp_read)
+    region_Prop_agar["agar_intens_Nucleus"].append(df.loc[0,'mean'])
+    
+for temp_read in H3k27me3Files:
+    df = pd.read_excel(temp_read)
+    region_Prop_agar["agar_intens_H3k27me3"].append(df.loc[0,'mean'])    
+    
+for temp_read in FopFiles:
+    df = pd.read_excel(temp_read)
+    region_Prop_agar["agar_intens_FOP"].append(df.loc[0,'mean'])    
+    
+for temp_read in ChromoFiles:
+    df = pd.read_excel(temp_read)
+    region_Prop_agar["agar_intens_Chromo"].append(df.loc[0,'mean']) 
+
+df_agar = pd.DataFrame.from_dict(region_Prop_agar, orient='index')
+df_agar = df_agar.transpose()
+    
+pd.DataFrame(df_agar).to_excel(folder_Path + '/Halo_Agarose_Excel.xlsx') 
+
+region_Prop_agar.clear()
+
+###########################
+#  Flower_Folder  Reading #
+###########################
+# Scan Cell Type Folders
+flower_Scan = folder_scan(flower_Folder,".tif")
+
+# Find matching files
+ChromoFiles =  matchingFiles(flower_Scan, chromo_Scan,sortedMarker=None, sourceMarker="(Chromo)_")
+
+NucleusFiles =  matchingFiles(ChromoFiles, nucleus_Scan, sortedMarker="(Chromo)_", sourceMarker="(Nucleus)_")
+H3k27me3Files = matchingFiles(ChromoFiles, h3k27me3_Scan, sortedMarker="(Chromo)_", sourceMarker="(H3K27me3)_")
+FoxjFiles = matchingFiles(ChromoFiles, foxj_Scan, sortedMarker="(Chromo)_", sourceMarker="(FOXJ)_")
+FopFiles = matchingFiles(ChromoFiles, fop_Scan, sortedMarker="(Chromo)_", sourceMarker="(FOP)_")
+
+# Dictionary to store the properties
+# region_Prop_ctrl = {"ctrl_intens_H3k27me3":[],"ctrl_intens_FOP":[],"ctrl_intens_Nucleus":[],
+#                     "ctrl_intens_Chromo":[]}
+region_Prop_agar = {"agar_intens_H3k27me3":[],"agar_intens_FOP":[],"agar_intens_Nucleus":[],
+                    "agar_intens_Chromo":[]}
+
+###########################
+#  Flower    Reading #
+###########################
+
+for temp_read in NucleusFiles:
+    df = pd.read_excel(temp_read)
+    region_Prop_agar["agar_intens_Nucleus"].append(df.loc[0,'mean'])
+    
+for temp_read in H3k27me3Files:
+    df = pd.read_excel(temp_read)
+    region_Prop_agar["agar_intens_H3k27me3"].append(df.loc[0,'mean'])    
+    
+for temp_read in FopFiles:
+    df = pd.read_excel(temp_read)
+    region_Prop_agar["agar_intens_FOP"].append(df.loc[0,'mean'])    
+    
+for temp_read in ChromoFiles:
+    df = pd.read_excel(temp_read)
+    region_Prop_agar["agar_intens_Chromo"].append(df.loc[0,'mean']) 
+
+df_agar = pd.DataFrame.from_dict(region_Prop_agar, orient='index')
+df_agar = df_agar.transpose()
+    
+pd.DataFrame(df_agar).to_excel(folder_Path + '/Flower_Agarose_Excel.xlsx') 
+
+region_Prop_agar.clear()
+
+###########################
+#  Multi_Folder  Reading #
+###########################
+# Scan Cell Type Folders
+multi_Scan = folder_scan(multi_Folder,".tif")
+
+# Find matching files
+ChromoFiles =  matchingFiles(multi_Scan, chromo_Scan,sortedMarker=None, sourceMarker="(Chromo)_")
+
+NucleusFiles =  matchingFiles(ChromoFiles, nucleus_Scan, sortedMarker="(Chromo)_", sourceMarker="(Nucleus)_")
+H3k27me3Files = matchingFiles(ChromoFiles, h3k27me3_Scan, sortedMarker="(Chromo)_", sourceMarker="(H3K27me3)_")
+FoxjFiles = matchingFiles(ChromoFiles, foxj_Scan, sortedMarker="(Chromo)_", sourceMarker="(FOXJ)_")
+FopFiles = matchingFiles(ChromoFiles, fop_Scan, sortedMarker="(Chromo)_", sourceMarker="(FOP)_")
+
+# Dictionary to store the properties
+# region_Prop_ctrl = {"ctrl_intens_H3k27me3":[],"ctrl_intens_FOP":[],"ctrl_intens_Nucleus":[],
+#                     "ctrl_intens_Chromo":[]}
+region_Prop_agar = {"agar_intens_H3k27me3":[],"agar_intens_FOP":[],"agar_intens_Nucleus":[],
+                    "agar_intens_Chromo":[]}
+
+###########################
+#  Multi_Folder  Reading #
+###########################
+
+for temp_read in NucleusFiles:
+    df = pd.read_excel(temp_read)
+    region_Prop_agar["agar_intens_Nucleus"].append(df.loc[0,'mean'])
+    
+for temp_read in H3k27me3Files:
+    df = pd.read_excel(temp_read)
+    region_Prop_agar["agar_intens_H3k27me3"].append(df.loc[0,'mean'])    
+    
+for temp_read in FopFiles:
+    df = pd.read_excel(temp_read)
+    region_Prop_agar["agar_intens_FOP"].append(df.loc[0,'mean'])    
+    
+for temp_read in ChromoFiles:
+    df = pd.read_excel(temp_read)
+    region_Prop_agar["agar_intens_Chromo"].append(df.loc[0,'mean']) 
+
+df_agar = pd.DataFrame.from_dict(region_Prop_agar, orient='index')
+df_agar = df_agar.transpose()
+    
+pd.DataFrame(df_agar).to_excel(folder_Path + '/Multi_Agarose_Excel.xlsx') 
+
+region_Prop_agar.clear()
