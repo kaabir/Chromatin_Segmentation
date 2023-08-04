@@ -400,7 +400,7 @@ for folder_name in folder_list:
                 nucleus_Inten = replace_intensity(maskLBL,img_nuclei)
                 print("Nucleus Intensity")
             
-                if 'img_dextran' in globals():
+                if 'img_dextran' in globals() and img_dextran not in None:
                     checkPorous = replace_intensity(maskLBL,img_dextran)
                     z_slice = checkPorous.shape[0]
                     avrMaskSize = z_slice * 0.5
@@ -491,8 +491,7 @@ for folder_name in folder_list:
                     
                 except RuntimeError:
                     
-                    print("No Chromocenter Found")
-                    statistics_Chromo['Chromocenter Area'] = None
+                    print("No Chromocenter Found")                    
             
                 nuc_EdgThin = np.zeros(img_nuclei.shape)
                 
