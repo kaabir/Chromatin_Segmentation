@@ -485,7 +485,7 @@ for folder_name in folder_list:
                     ### Save the Chromocenter Mask
                     prediction_stack_32 = img_as_float32(Chromo_Thres_Inter2, force_copy=False)     
                     os.chdir(Result_folder)
-                    imwrite("(Chromocenter)_"+filename+".tif", prediction_stack_32)                            
+                    imwrite("(Chromocenter)_"+filename+ str(lbl_count)+".tif", prediction_stack_32)                            
                     pd.DataFrame(statistics_Chromo).to_excel('(Chromo)_' + filename + '_' + str(lbl_count)+'.xlsx')   
 
                     
@@ -577,7 +577,7 @@ for folder_name in folder_list:
                     else:
                         prediction_stack_32 = img_as_float32(actin_img, force_copy=False) 
                         os.chdir(Result_folder)
-                        imwrite("(UnSegmented_Actin)_"+filename+".tif", prediction_stack_32)
+                        imwrite("(UnSegmented_Actin)_"+filename+ str(lbl_count)+".tif", prediction_stack_32)
                         #actin_binary = nsitk.threshold_maximum_entropy(image2_Gaus)
                         print("No actin present")
                         
