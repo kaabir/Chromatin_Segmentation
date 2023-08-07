@@ -183,6 +183,9 @@ def countNeighbours(x, y, trace_coordinates):
     return number_of_neighbours
 
 def fill_large_hole(binary_image):
+    """Function to fill holes in a 2D binary image. Applied after obtaining mask
+    for thinning the edges till boundary for Actin coverage."""
+    
     # Fills large holes and smoothes edges
     # Iterate over each 2D slice of the 3D image
     filled_slices = []
@@ -203,6 +206,9 @@ def fill_large_hole(binary_image):
     return filled_image
 
 def replace_intensity(mask, img):
+    """Function to replace the intensity of the original image where mask and image
+    are present."""
+    
     if not (mask.shape == img.shape):
         print("Mask shape differs from image shape")
         return None
@@ -217,6 +223,9 @@ def replace_intensity(mask, img):
 
 #np.seterr(divide='ignore', invalid='ignore')
 def normalize_intensity(k):
+    """Function to normalize intensity - Used when intermodes was applied
+    to overcome batch-batch variability in segmentation."""
+    
     #return np.clip(k, 0., 1., out=k)
     # ##k_min = k.min(axis=(1, 2), keepdims=True)
     # ##k_max = k.max(axis=(1, 2), keepdims=True)
@@ -235,6 +244,8 @@ def trim_array(arr, mask):
 
 # Read the Tif/CZI File
 def folder_scan(directory):
+    """Function to collect all the files with a specific extension"""
+    
     valid_extensions = (".czi", ".tif")  # Valid extensions: CZI and TIF
     get_files = []
     for f_name in os.listdir(directory):
@@ -255,7 +266,10 @@ def connected_components_labeling_box(binary_input):
     return labeled_array
     
 def threshold_binary_image(image, min_threshold_mean, min_threshold_std):
-
+    """Function to process Actin Coverage. In case 1. when normal actin is present
+    then I can apply OTSU simply. If a big actin blob is present then I apply maximum
+    entropy to segment actin region."""
+    
     if img_mean >= min_threshold_mean and img_std <= min_threshold_std:
         binary_image = nsitk.threshold_otsu(image)
         return binary_image, "Otsu"
@@ -266,6 +280,10 @@ def threshold_binary_image(image, min_threshold_mean, min_threshold_std):
         return None, "No actin present"
 
 def get_actin_coverage(act_obj, nuc_EdgThin_Ar):
+    """Function to get Actin coverage. Here If the ratio of actin to nucleus is in the rang of
+    1-1.6 in cases where due to nucleus membrane curling I have extra regions after thinning
+    A true value is taken if the coverge is below 1 ."""
+    
     Coverage = []
     actin_coverage = 0.0
     for act_Z, nucl_Z in zip(act_obj, nuc_EdgThin_Ar):
@@ -394,31 +412,35 @@ for folder_name in folder_list:
         print("Number of Unique mask Found", np.unique(label_OrgCnt)[1:])
         for lbl_count in np.unique(label_OrgCnt)[1:]:
             
-            if label_counts[lbl_count] >= 120/min_NUC_Size:# 100000from 120um3 min nuclei I expect / 0.0351435*2
+            if label_counts[lbl_count] >= 110/min_NUC_Size:# 100000from 120um3 min nuclei I expect / 0.0351435*2
+
                 print('lbl_count >>>>', lbl_count)
+    
                 maskLBL = label_OrgCnt == lbl_count
-                nucleus_Inten = replace_intensity(maskLBL,img_nuclei)
-                print("Nucleus Intensity")
-            
-                if 'img_dextran' in globals() and img_dextran not in None:
+                nucleus_Inten = replace_intensity(maskLBL,img_nuclei)            
+                print("Nucleus Intensity")     
+                
+                if 'img_dextran' in globals():# and img_dextran not in None:
                     checkPorous = replace_intensity(maskLBL,img_dextran)
                     z_slice = checkPorous.shape[0]
-                    avrMaskSize = z_slice * 0.5
-                    if np.mean(checkPorous[avrMaskSize]) >= 2800:# Here I want to scan The mean Z
+                    avrMaskSize = int(z_slice * 0.5)
+                    dexIntenThresh = np.mean(checkPorous[avrMaskSize])
+                    print('Dextran Intensity >>>>', dexIntenThresh)
+                    if dexIntenThresh >= 2800:# Here I want to scan The mean Z
                     # Additional check to make sure no porous nuclei is segmented
                         continue
                 else:                    
-                        pass                          
-                nucelus_IntenNorm = normalize_intensity(nucleus_Inten)
-                print("Nucleus ->  normalize_intensity")
-                # nucelus_AdaptEq = exposure.equalize_adapthist(nucelus_IntenNorm, clip_limit=0.03)
-                # print("equalize_adapthist")
-                # nucelus_GB = nsitk.gaussian_blur(nucelus_AdaptEq, 2.0, 2.0, 0.0)
-                # nucelus_OT = nsitk.threshold_otsu(nucelus_GB)
-                # print("Threshold Otsu")
-                # Chromo_SGB = cle.subtract_gaussian_background(nucelus_GB, None, 10.0, 10.0, 0.0)            
-                # Chromo_Thres_Inter = nsitk.threshold_intermodes(Chromo_SGB)
-                
+                        pass  
+                #img_dextran = None                     
+
+                #######
+                # View Segmentation
+                #######
+                #viewer = napari.Viewer()         
+                               
+                nucelus_OrgNorm = normalize_intensity(nucleus_Inten)
+                print("Nucleus ->  normalize_intensity")                         
+                                
                 nucelus_GB = nsitk.gaussian_blur(nucelus_OrgNorm, 2.0, 2.0, 0.0)
                 nucelus_GC = cle.gamma_correction(nucelus_GB, None, 1.0)
                 nucelus_OT = cle.threshold_otsu(nucelus_GC)
@@ -429,101 +451,112 @@ for folder_name in folder_list:
                 print("Nucleus -> Fill Binary Mask")
                 nucleus_Trim = replace_intensity(nucelus_FLH,img_nuclei)
                 
-                nucelus_TrimNorm = normalize_intensity(nucleus_Trim) 
-                # # Nucleus Segmentation
-        
-                statistics_nucleus = cle.statistics_of_labelled_pixels(img_nuclei, nucelus_FLH2)    
+                #viewer.add_image(nucleus_Trim)
+                
+                nucleus_TrimNorm = normalize_intensity(nucleus_Trim)   
+                #######
+                # View Segmentation
+                #######
+                #viewer.add_image(nucleus_TrimNorm)
+                            
+                print("Nucleus -> Normalized Intensity")                
+                # # Nucleus Segmentation       
+                statistics_nucleus = cle.statistics_of_labelled_pixels(img_nuclei, nucelus_FLH)    
 
-                print("nucleus Statisitcs")
+                print("Nucleus ->  Statisitcs")
+                
                 nuclei_Area = np.sum(statistics_nucleus['area'], axis=0)
                 #nuclei_Area = statistics_nucleus.loc[0, 'number_of_pixels']
-                print("Number of Pixels", nuclei_Area)
+                print("Nucleus -> Number of Pixels", nuclei_Area)
                 nuclei_Area = nuclei_Area*px_to_um_X*px_to_um_Y*px_to_um_Z
                 statistics_nucleus['Nucleus Area'] = nuclei_Area
-                print('nuclei_Area >>>>', nuclei_Area)
-            
+                
+                print("Nucleus  Area -> ", nuclei_Area)
+                               
+                #######
+                # View Segmentation
+                #######
+                # viewer.add_image(multiOTSU_GB) 
                 ### Save the Nucleus Mask
-                prediction_stack_32 = img_as_float32(nucelus_FLH2, force_copy=False)     
+                prediction_stack_32 = img_as_float32(nucelus_FLH, force_copy=False)     
                 os.chdir(Result_folder)
-                imwrite("(Nucleus)_"+filename+".tif", prediction_stack_32)              
+                imwrite("(Nucleus)_"+filename + str(lbl_count)+".tif", prediction_stack_32)              
                 pd.DataFrame(statistics_nucleus).to_excel('(Nucleus)_' + filename+'_'+ str(lbl_count)+'.xlsx')
-            
-                # Chromocenter Segmentation # Approach 1
-                # Normmalized nucleus, Top Hat box, Intermodes Threshold
-                # Chromo_GB = cle.gaussian_blur(nucelus_IntenNorm, None, 2.0, 2.0, 0.0)
-                # #image1_gb = cle.gaussian_blur(intensity_map_norm, None, 2.0, 2.0, 0.0)
-                # Chromo_THB = cle.top_hat_box(Chromo_GB, None, 15.0, 15.0, 0.0)
-                # # subtract gaussian background
-                # Chromo_SGB = cle.subtract_gaussian_background(Chromo_THB, None, 10.0, 10.0, 0.0)
-                # Chromo_Thres_Inter1 = nsitk.threshold_intermodes(Chromo_SGB)
+
                 
-                # Chromocenter Segmentation # Approach 2
-                # Normalized Nucleus, Max Filter, Max entropy
-                # Chromo_GB = cle.gaussian_blur(nucelus_IntenNorm, None, 2.0, 2.0, 0.0)
-                # maximum filter
-                # Chromo_THB = nsbatwm.maximum_filter(Chromo_GB, 0.0)
-                # threshold maximum entropy
-                # Chromo_Thres_Inter2 = nsitk.threshold_maximum_entropy(Chromo_THB)
+                # Chromocenter Segmentation
+                # The chormocenter segmentation is using double OSTU
+                # Here I apply gaussian blur and Background noise removal filter
+                # to get the intense regions. This approach is different from
+                # taking the intensity value above 1.25*stdDev(Intensity)             
+                from skimage.filters import threshold_multiotsu
+                ChromoBlur = cle.gaussian_blur(nucleus_Trim, None, 2.0, 2.0, 0.0)                
+                ChromoTHB = cle.top_hat_box(ChromoBlur, None, 20.0, 20.0, 0.0)
+                ChromoTHBAr = np.array(ChromoTHB) 
+                Chrom_multiOTSU = threshold_multiotsu(nucleus_Trim)                    
+                #ChromoSeg = ChromoTHBAr > Chrom_multiOTSU[1]
                 
-                Chromo_GB = cle.gaussian_blur(nucelus_OrgNorm, None, 2.0, 2.0, 0.0)
-                # maximum filter
-                # Chromo_THB = cle.top_hat_box(Chromo_GB, None, 15.0, 15.0, 0.0)
-                # Chromo_SGB = cle.subtract_gaussian_background(Chromo_THB, None, 10.0, 10.0, 0.0)
-                
-                try:              
-                    # threshold Intermodes entropy
-                    Chromo_Thres_Inter2 = nsitk.threshold_intermodes(Chromo_SGB)
-                    Chromo_Thres_Inter_Comb = cle.connected_components_labeling_box(Chromo_Thres_Inter2)
+                try:       
+                    ChromoSeg = ChromoTHBAr > Chrom_multiOTSU[1]
+                    print("<- Chromocenter Segmentation -> ")
+                    #######
+                    # View Segmentation
+                    #######
+                    #viewer.add_image(Chromo_Thres_Inter2)
+                    
+                    Chromo_Thres_Inter_Comb = cle.connected_components_labeling_box(ChromoSeg)
                     statistics_Chromo = cle.statistics_of_labelled_pixels(img_nuclei, Chromo_Thres_Inter_Comb)                 
                     intermodes_chromo_Area = np.sum(statistics_Chromo['area'], axis=0)
                 
                     #intermodes_chromo_Area = statistics_Chromo.loc[0, 'number_of_pixels']
                     chromointermodes_Area = intermodes_chromo_Area *px_to_um_X* px_to_um_Y
                     statistics_Chromo['Chromocenter Area'] = chromointermodes_Area 
-                    print('Chromocenter_Area >>>>', chromointermodes_Area)        
+                    print('Chromocenter_Area ->', chromointermodes_Area)        
                     
                     ### Save the Chromocenter Mask
-                    prediction_stack_32 = img_as_float32(Chromo_Thres_Inter2, force_copy=False)     
+                    prediction_stack_32 = img_as_float32(ChromoSeg, force_copy=False)     
                     os.chdir(Result_folder)
-                    imwrite("(Chromocenter)_"+filename+ str(lbl_count)+".tif", prediction_stack_32)                            
+                    imwrite("(Chromocenter)_"+filename + str(lbl_count) +".tif", prediction_stack_32)                            
                     pd.DataFrame(statistics_Chromo).to_excel('(Chromo)_' + filename + '_' + str(lbl_count)+'.xlsx')   
-
                     
                 except RuntimeError:
                     
-                    print("No Chromocenter Found")                    
-            
+                    print("No Chromocenter Found")
+
                 nuc_EdgThin = np.zeros(img_nuclei.shape)
                 
-                for i in range(nucelus_FLH2.shape[0]):            
-                    thinned_slice = cle.reduce_labels_to_label_edges(nucelus_FLH2[i]) #cle.reduce_labels_to_label_edges(image2_FH[i])            
+                for i in range(nucelus_FLH.shape[0]):            
+                    thinned_slice = cle.reduce_labels_to_label_edges(nucelus_FLH[i]) #cle.reduce_labels_to_label_edges(image2_FH[i])            
                     nuc_EdgThin[i] = thinned_slice
                     
-                print('nucleus Edge Thinning >>>>')
+                print('Nucleus Edge Thinning >>>>')
+            
             
                 nuc_EdgThin_Ar = np.array(nuc_EdgThin)
 
-                if 'img_actin' in globals() and img_actin is not None:    
+                # Actin Segmentation
+                #if 'img_actin' in globals():
+                if 'img_actin' in globals() and img_actin is not None:       
                     
                     act_obj = np.zeros(img_actin.shape)
                     
-                    # To verify in some case it is not Dextran instead
-                    # z_slice = img_actin.shape[0]
-                    # avrMaskSize = int(z_slice * 0.5)
-                    # checkDextran = np.mean(img_actin[avrMaskSize])
-                    # print('checkDextran >>>>', checkDextran)
-                    # if checkDextran > 2800:# Here I want to scan The mean Z
-                    # # Additional check to dextran not in Actin channel
-                    #     print(">> It is Dextran not Actin <<")
-                    #     print(">> Skipping <<")
-                    #     continue
-                    # else:                    
-                    #     pass                    
+                    # # To verify in some case it is not Dextran instead
+                    z_slice = img_actin.shape[0]
+                    avrMaskSize = int(z_slice * 0.5)
+                    checkDextran = np.mean(img_actin[avrMaskSize])
+                    print('checkDextran >>>>', checkDextran)
+                    if checkDextran > 2800:# Here I want to scan The mean Z
+                    # Additional check to dextran not in Actin channel
+                        print(">> It is Dextran not Actin <<")
+                        print(">> Skipping <<")
+                        continue
+                    else:                    
+                        pass                    
                     
                     dilated = ndimage.binary_dilation(maskLBL, diamond, iterations=10).astype(maskLBL.dtype)
                     actin_img = replace_intensity(dilated, img_actin)
                     actin_img_N = normalize_intensity(actin_img)
-                    print(">> Actin Intensity Normalized <<")
+                    print(">> Actin Intensity Normalized <<")                                    
                 
                     # Adaptive Thresholding
                     min_threshold_mean = 20
@@ -532,9 +565,9 @@ for folder_name in folder_list:
                     actin_adapteq = exposure.equalize_adapthist(actin_img_N, clip_limit=0.03)
             
                     img_mean = np.mean(actin_img)
-                    print('Mean Actin Intensity >>>>', img_mean)
+                    print('Actin  -> Mean Actin Intensity >>>>', img_mean)
                     img_std = np.std(actin_img)
-                    print('Std Actin Intensity >>>>', img_std)
+                    print('Actin  -> Std Actin Intensity >>>>', img_std)
                     
                     image2_Blur = cle.gaussian_blur(actin_adapteq, None, 2.0, 2.0, 0.0)
                     image2_Gaus = nsitk.white_top_hat(image2_Blur, 10, 10, 0)
@@ -557,32 +590,32 @@ for folder_name in folder_list:
                         ratio = std_per_slice[0] / std_per_slice[1]
                         threshold_ratio = 5.0  #  threshold ratio 
                         indices_to_remove = np.where(std_per_slice[1:] / std_per_slice[:-1] > threshold_ratio)[0]  + 1
-                        act_obj[indices_to_remove] = 1
+                        act_obj[indices_to_remove] = 0
+                        
+                        numSliceRem = len(indices_to_remove)
 
                         # Write Actin statistics to Excel file
                         statistics_Actin =  cle.statistics_of_labelled_pixels(img_actin, actin_binary)    
 
-                        print("Actin Found")
+                        print("Actin  -> Actin Found")
                         actin_coverage = get_actin_coverage(act_obj, nuc_EdgThin_Ar)                        
                     
-                        print("Actin Coverage:", actin_coverage)
+                        print("Actin  -> Actin Coverage:", actin_coverage)
                         statistics_Actin['Actin Coverage'] = actin_coverage 
                         
                         ### Save the Actin Mask
                         prediction_stack_32 = img_as_float32(actin_binary, force_copy=False)     
                         os.chdir(Result_folder)
-                        imwrite("(Actin)_"+filename+".tif", prediction_stack_32)                    
+                        imwrite("(Actin)_" + str(lbl_count) +filename+".tif", prediction_stack_32)                    
                         pd.DataFrame(statistics_Actin).to_excel('(Actin)_' + filename + '_' + str(lbl_count) + '.xlsx')             
-                        
+                         
                     else:
-                        prediction_stack_32 = img_as_float32(actin_img, force_copy=False) 
-                        os.chdir(Result_folder)
-                        imwrite("(UnSegmented_Actin)_"+filename+ str(lbl_count)+".tif", prediction_stack_32)
+                    
                         #actin_binary = nsitk.threshold_maximum_entropy(image2_Gaus)
-                        print("No actin present")
-                        
-        img_actin = None # Because Actin is changing in case we switch from Ctrl
+                        print("Actin  -> No actin present")
 
+                       
+        img_actin = None
 
 # Close the log file
 #log_file.close()
