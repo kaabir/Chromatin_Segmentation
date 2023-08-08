@@ -323,7 +323,7 @@ for folder_name in folder_list:
     px_to_um_X = 0.0351435
     px_to_um_Y = 0.0351435
     px_to_um_Z = 1 #1.0/0.0351435 # making pixels isotropic
-    min_NUC_Size = px_to_um_X * px_to_um_X
+    min_NUC_Size = 110/(px_to_um_X * px_to_um_X * px_to_um_Z) # Considering average nuclei size to be 110um2
 
     for image in get_files:
 
@@ -419,7 +419,9 @@ for folder_name in folder_list:
                 maskLBL = label_OrgCnt == lbl_count
                 nucleus_Inten = replace_intensity(maskLBL,img_nuclei)            
                 print("Nucleus Intensity")     
-                
+
+                # A bit tricky to detect large porous nuclei with few stacks
+                # Hence I fallback to check the nuclei size as additional marker
                 if 'img_dextran' in globals():# and img_dextran not in None:
                     checkPorous = replace_intensity(maskLBL,img_dextran)
                     z_slice = checkPorous.shape[0]
@@ -472,7 +474,11 @@ for folder_name in folder_list:
                 statistics_nucleus['Nucleus Area'] = nuclei_Area
                 
                 print("Nucleus  Area -> ", nuclei_Area)
-                               
+                if nuclei_Area < 95:
+                   
+                        continue
+                else:                    
+                        pass                                
                 #######
                 # View Segmentation
                 #######
