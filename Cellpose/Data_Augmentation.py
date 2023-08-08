@@ -68,8 +68,8 @@ def folder_Scan(directory):
         images.append(g_name)
 
 
-folder_Scan('C:/Users/kaabi/Documents/Nuceli_Data/Enucleation/Cellpose/Sorted/')
-folder ='C:/Users/kaabi/Documents/Nuceli_Data/Enucleation/Cellpose/Sorted/'
+folder_Scan('C:/Users/kaabi/Documents/Nuceli_Data/Enucleation/Cellpose/Sorted_Nuclei/')
+folder ='C:/Users/kaabi/Documents/Nuceli_Data/Enucleation/Cellpose/Sorted_Nuclei/'
 
 for g_name in images:
     img = cv2.imread(os.path.join(folder,g_name), cv2.IMREAD_UNCHANGED)
