@@ -359,15 +359,16 @@ for folder_name in folder_list:
         # for your single channel image use [0, 0] 
         # for the multi channel image it's [3, 0]
         channels = [0, 0] 
-        diameter = 170 #model diam_labels  165.257 (mean diameter of training ROIs)
+        diameter = 200 #model diam_labels  171.141 (mean diameter of training ROIs)
         use_GPU = True
         stitch_threshold=1
         #do_3D=True
         #resample=True
         cellprob_threshold = 0
 
-        pretrained_model = "C:/Users/kaabi/Documents/Nuceli_Data/Enucleation/Cellpose/Models_live_eNUC/CP_20230306_150448_200"
-
+        pretrained_model = "C:/Users/kaabi/Documents/Nuceli_Data/Enucleation/Cellpose/Sorted_Nuclei/Done/models/CP_20230808_111811"
+        # C:/Users/kaabi/Documents/Nuceli_Data/Enucleation/Cellpose/Sorted_Nuclei/Done/models/CP_20230808_111811
+        
         model_match_threshold = 25 #30
         flow_threshold = (31.0 - model_match_threshold) / 10.
 
