@@ -398,9 +398,9 @@ for chromo_read in ChromoFiles:
             temp_area = np.sum(df['area'], axis=0)
             temp_area = temp_area* px_to_um_conv   
             chromo_data[file_name] = (df['mean_intensity'].mean(), temp_area)
-        else:
+        elif noValues == 1:
             # If there is only one value or no value, set both values in the tuple to the single value in the DataFrame
-            temp_area = df.loc[0,'area']
+            temp_area = df.iloc[0, df.columns.get_loc('area')]
             temp_area = temp_area* px_to_um_conv   
             mean_intensity_value = df['mean_intensity'].iloc[0] if noValues == 1 else 'None'
             chromocenter_area_value = temp_area if noValues == 1 else 'None'
@@ -494,7 +494,7 @@ for chromo_read in ChromoFiles:
             temp_area = temp_area* px_to_um_conv           
             # Store the mean intensity and Chromocenter Area values for the current file in the dictionary as a tuple
             chromo_data[file_name] = (df['mean_intensity'].mean(), temp_area)
-        else:
+        elif noValues == 1:
             # If there is only one value or no value, set both values in the tuple to the single value in the DataFrame
             temp_area = df.loc[0,'area']
             temp_area = temp_area* px_to_um_conv             
