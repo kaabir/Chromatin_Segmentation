@@ -432,8 +432,9 @@ for folder_name in folder_list:
                     if dexIntenThresh >= 2800:# Here I want to scan The mean Z
                     # Additional check to make sure no porous nuclei is segmented
                         continue
-                else:                    
-                        pass  
+                else:
+                    print("Dextran Channel not available")
+                    
                 #img_dextran = None                     
 
                 #######
