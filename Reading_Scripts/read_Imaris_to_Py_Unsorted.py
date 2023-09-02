@@ -132,7 +132,7 @@ Nuclei_area_T0 = []
 for nucleiread in nuclei_files:
     AC_nuclei_TO = read_CSV(nucleiread)
     Imaris_vca["nuclei_vca_0"].append(AC_nuclei_TO.loc['Volume','Sum'])
-    Nuclei_area_T0.append(AC_nuclei_TO.loc['Volume','Sum'])
+    Nuclei_area_T0.append(AC_nuclei_TO.loc['Area','Sum'])
     Imaris_vca["sphericity_vca_0"].append(AC_nuclei_TO.loc['Sphericity','Mean']) 
 nuclei_files.clear()  
 
@@ -210,7 +210,7 @@ chromo_files.clear()
 for nucleiread in nuclei_files:
     CT_nuclei_TO = read_CSV(nucleiread)
     Imaris_ctrl["nuclei_ctrl_0"].append(CT_nuclei_TO.loc['Volume','Sum'])
-    Nuclei_area_T0.append(CT_nuclei_TO.loc['Volume','Sum'])
+    Nuclei_area_T0.append(CT_nuclei_TO.loc['Area','Sum'])
     Imaris_ctrl["sphericity_ctrl_0"].append(CT_nuclei_TO.loc['Sphericity','Mean']) 
 nuclei_files.clear()  
 
@@ -226,7 +226,7 @@ chromo_files.clear()
 for nucleiread in nuclei_files:
     CT_nuclei_T3O = read_CSV(nucleiread)
     Imaris_ctrl["nuclei_ctrl_1"].append(CT_nuclei_T3O.loc['Volume','Sum'])
-    Nuclei_area_T30.append(CT_nuclei_T3O.loc['Volume','Sum'])
+    Nuclei_area_T30.append(CT_nuclei_T3O.loc['Area','Sum'])
     Imaris_ctrl["sphericity_ctrl_1"].append(CT_nuclei_T3O.loc['Sphericity','Mean']) 
 nuclei_files.clear()  
 
