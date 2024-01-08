@@ -24,6 +24,8 @@ from skimage import img_as_float32
 from skimage.util import img_as_ubyte
 from tifffile import imsave
 from napari_segment_blobs_and_things_with_membranes import split_touching_objects
+import napari_segment_blobs_and_things_with_membranes as nsbatwm
+from skimage.measure import regionprops
 
 device = cle.select_device("AMD Radeon Pro W6600")
 
@@ -31,16 +33,6 @@ from scipy import ndimage as ndi
 # Structure  for Actin Dilation
 diamond = np.zeros((20, 20), dtype=bool)
 diamond[1:19, 1:19] = True
-
-# model_type='cyto' or model_type='nuclei'
-#model = models.Cellpose(model_type='cyto', gpu = True) #nuclei model for brdu
-# # Read the Tif File
-
-# folder_path = 'E:/Quantified/Agarose Compression/20221103 IF OF1 D1 H3K9me3 FOP FOXJ1/'
-
-# file_path = 'Binned_z_3d-20221103_IF_OF1 D1 H3K27me3 FOP FOXJ1_1H_Ctrl_S2 _01.tif'
-# #3d-20221103 IF OF1 D1 H3K27me3 FOP FOXJ1 -1H Ctrl -01-1
-# img_path = folder_path + file_path
 
 
 def trim_array(arr):
@@ -101,89 +93,84 @@ def replace_intensity(mask, img):
     mat_intensity = np.where(np.logical_and(mask,img),img,0) # Overlap Mask on original image (as reference)
     return mat_intensity
 
-folder_path = 'E:/Quantified/Agarose Compression/20221103 IF OF1 D1 H3K9me3 FOP FOXJ1/'
+print(" Folder List Stage")
 
-get_files = folder_scan(folder_path)
+folder_list = [
+    'E:/Quantified/Agarose Compression/231219 Compression OF1 Volume Fraction/03-Ctrl_20ul/Agarose/',
+    'E:/Quantified/Agarose Compression/231219 Compression OF1 Volume Fraction/03-Ctrl_20ul/Ctrl/',
+]
 
-# Conversion to um
-px_to_um_X = 0.1098235
-px_to_um_Y = 0.1098235
-px_to_um_Z = 0.32 #1.0/0.0351435 # making pixels isotropic
+for folder_name in folder_list:
+    print(folder_name)
+    get_files = folder_scan(folder_name)
+    print("Scanning Files in the folder >>>>>>>", folder_name)
+
+    #folder_path = 'E:/Quantified/Agarose Compression/231109 e230926 OF1 D6 Tf shNeg shArp3 Pad2percent 3R Gfop Rdsred FRfoxj1/'
+
+    get_files = folder_scan(folder_name)
+
+    # Conversion to um
+    px_to_um_X = 0.1098235
+    px_to_um_Y = 0.1098235
+    px_to_um_Z = 0.3054316 #1.0/0.0351435 # making pixels isotropic
 
 
-for image in get_files:
-    aics_image = AICSImage(image) # Read indivi
-    filename = Path(image).stem
+    for image in get_files:
+        # # Read the CZI File
+        aics_image = AICSImage(image) # Read indivi
+        filename = Path(image).stem
     # <Dimensions [T: 1, C: 1, Z: 256, Y: 256, X: 256]> # ("ZYX", T=0)
-    no_chnls = aics_image.dims.C
-    if no_chnls == 1:
-        img_nuclei = aics_image.get_image_data("ZYX", T=0, C=0) 
-    elif no_chnls == 2: 
-        img_actin = aics_image.get_image_data("ZYX", T=0, C=0) # A Channel
-        img_nuclei = aics_image.get_image_data("ZYX", T=0, C=1)
-    elif no_chnls == 3:
-        img_actin = aics_image.get_image_data("ZYX", T=0, C=0) # A Channel
-        img_dextran_read = aics_image.get_image_data("ZYX", T=0, C=1) # Dextran Channel
-        img_nuclei = aics_image.get_image_data("ZYX", T=0, C=2)
-    else:
-        img_h3k27me3 = aics_image.get_image_data("ZYX", T=0, C=0) # Actin Channel 
-        img_foxj = aics_image.get_image_data("ZYX", T=0, C=1) # yH2AX
-        img_fop = aics_image.get_image_data("ZYX", T=0, C=2) # LaminB1
-        img_nuclei = aics_image.get_image_data("ZYX", T=0, C=3) # Nucleus
+        no_chnls = aics_image.dims.C
+        if no_chnls == 1:
+            img_nuclei = aics_image.get_image_data("ZYX", T=0, C=0) 
+        elif no_chnls == 2: 
+            img_actin = aics_image.get_image_data("ZYX", T=0, C=0) # A Channel
+            img_nuclei = aics_image.get_image_data("ZYX", T=0, C=1)
+        elif no_chnls == 3:
+            img_actin = aics_image.get_image_data("ZYX", T=0, C=0) # A Channel
+            img_dextran_read = aics_image.get_image_data("ZYX", T=0, C=1) # Dextran Channel
+            img_nuclei = aics_image.get_image_data("ZYX", T=0, C=2)
+        else:
+            img_fop = aics_image.get_image_data("ZYX", T=0, C=0) # Actin Channel   # Green with Far Red and then Red and Blue channel
+            img_foxj = aics_image.get_image_data("ZYX", T=0, C=1) # yH2AX
+            img_phosRB = aics_image.get_image_data("ZYX", T=0, C=2) # LaminB1
+            img_nuclei = aics_image.get_image_data("ZYX", T=0, C=3) # Nucleus  # Hoescht Channel
 
-        img_nuclei = np.max(img_nuclei, axis=0)
+            img_nuclei = np.max(img_nuclei, axis=0)
 
-    if 'img_fop' in globals():
-        img_fop = np.max(img_fop, axis=0)
+        if 'img_fop' in globals():
+            img_fop = np.max(img_fop, axis=0)
 
-    if 'img_h3k27me3' in globals():
-        img_h3k27me3 = np.max(img_h3k27me3, axis=0)
+        if 'img_phosRB' in globals():
+            img_phosRB = np.max(img_phosRB, axis=0)
     
-    if 'img_foxj' in globals():
-        img_foxj = np.max(img_foxj, axis=0)   
+        if 'img_foxj' in globals():
+            img_foxj = np.max(img_foxj, axis=0)   
 
-    if not os.path.exists(folder_path + '/Result'):
-        os.makedirs(folder_path + '/Result')
+        if not os.path.exists(folder_name + '/Result'):
+            os.makedirs(folder_name + '/Result')
         
-    Result_folder = folder_path + '/Result/' 
+        Result_folder = folder_name + '/Result/' 
 
+        channels = [0, 0] 
+        diameter = 90 #169.708
+        use_GPU = True
+        cellprob_threshold = 0
 
-# In case four channels
+        stitch_threshold = 0
 
-# # Read the CZI File
-# img_path = AICSImage("C:/Users/kaabi/Documents/Nuceli_Data/Enucleation/Cellpose/Test_Dataset/Files/02.czi")
-# # Hoescht Channel
-# img = img_path.get_image_data("ZYX", C=2, S=0, T=0)
-# get_Zstack = img.shape[0]
+        model_match_threshold = 26#30
+        flow_threshold = (31.0 - model_match_threshold) / 10.0
 
+        print('Segmentation Begins')
 
-# For saving results
-#.stem
-# Upscale the Z dimension to be isotropic
-#anisotropy = 2*get_Zstack
+        logger = io.logger_setup()
+        print('Segmenting Image --->', filename)
+    
+        pretrained_model = "C:/Users/kaabi/Documents/Nuceli_Data/Enucleation_Quantification/Cellpose/Models_fixed_eNUC/bulk/CP_CPX_Bulk_nuclei_Main_20231130"
 
-# channel to segment and nuclear channel 
-# numbering starts at 1 
-# for your single channel image use [0, 0] 
-# for the multi channel image it's [3, 0]
-    channels = [0, 0] 
-    diameter = 90 #169.708
-    use_GPU = True
-    cellprob_threshold = 0
-
-    stitch_threshold = 0
-
-    model_match_threshold = 27#30
-    flow_threshold = (31.0 - model_match_threshold) / 10.0
-
-    print('Segmentation begins')
-
-    logger = io.logger_setup()
-
-    pretrained_model = "C:/Users/kaabi/Documents/Nuceli_Data/Enucleation/Cellpose/Models_fixed_eNUC/bulk/CP_LC3_Bulk_nuclei_Main"
-
-    model = models.CellposeModel(gpu=use_GPU, model_type=pretrained_model)#,residual_on=False, style_on=False, concatenation=False)#, resample=True, do_3D=True,stitch_threshold=1)
-    mask, flows, styles = model.eval(img_nuclei, 
+        model = models.CellposeModel(gpu=use_GPU, model_type=pretrained_model)#,residual_on=False, style_on=False, concatenation=False)#, resample=True, do_3D=True,stitch_threshold=1)
+        mask, flows, styles = model.eval(img_nuclei, 
                                 channels =channels,
                                 #anisotropy=anisotropy,
                                 diameter=diameter, 
@@ -196,133 +183,75 @@ for image in get_files:
                                 net_avg=True,
                                 stitch_threshold=stitch_threshold,)
 
-#mask_np1 = nsitk.morphological_watershed(mask)
-#mask_np = np.array(mask)
+        clean_mask = cle.exclude_labels_on_edges(mask)
+        
+        from skimage.segmentation import clear_border
+        from scipy.ndimage import label
 
-    clean_mask = cle.exclude_labels_on_edges(mask)
+        # Chromocenter Segmentation
 
-    from skimage.segmentation import clear_border
-    from scipy.ndimage import label
+        from skimage import measure
+        from skimage.filters import threshold_multiotsu
+        labels = measure.label(clean_mask)
 
-#merged_Labels_np = split_touching_objects(merged_Labels_np)
-
-#composite = np.dstack((img_fop, img_h3k27me3, img_foxj, img_nuclei))
-
-
-# # Perform Z-projection on each channel
-# projection_method = "max"  # Choose the desired projection method ("max", "min", "mean", "sum", etc.)
-# composite = []
-# for channel_index in range(merged_Labels_np):
-#     z_projected_channel = np.max(channel_index, axis=0)  # Replace with the desired projection method
-#     composite.append(z_projected_channel)
-
-# Save Labels
-#prediction_stack_32 = img_as_float32(mask, force_copy=False)     
-#os.chdir(Result_folder)
-#imsave(str(filename)+".tif", prediction_stack_32)
-# Getting Original intensities
-#intensity_vector = cle.read_intensities_from_map(mask, img)
-##statistics_hoescht = cle.statistics_of_labelled_pixels(img, merged_Labels_np)
-#
-# Conversion to um
-    px_to_um_X = 0.1098235
-    px_to_um_Y = 0.1098235
-#px_to_um_Z = 1 # check for bulk
-#nuclei_Area = statistics['area']*px_to_um_Y*px_to_um_Y*px_to_um_Z
-
-# Chromocenter Segmentation
-
-
-    from skimage import measure
-    labels = measure.label(clean_mask)
-
-    for i, label in enumerate(np.unique(labels)[1:]):
-        print('i ---', i)
-        #print('label ---', label)
-        if label in labels: # if label in labels:
-            print('label ---', label)
+        for i, mask_label in enumerate(np.unique(labels)[1:]):
+            print('i ---', i)
+            #print('label ---', label)
+            if mask_label in labels:  # This check is not necessary
+                print('mask_label ---', mask_label)
             # create a mask for the current label
-            #if (len(np.unique(merged_Labels)-1) == 1):# and no_chnls>1:
-                # break    
-            mask_unique = labels == label
-            #nuc_lbl = np.array(label)
-        #label_crop = trim_array(mask)
-
+                mask_unique = labels == mask_label
+            # Continue with your processing using the mask_label            
+            # Dilation of unqiue label
+                dilated_mask = ndi.binary_dilation(mask_unique, structure = diamond, iterations=3).astype(mask_unique.dtype)
+                # FoxJ Channel
+                intensity_Fop = replace_intensity(dilated_mask, img_fop)
         
-        # Dilation of unqiue label
-            dilated_mask = ndi.binary_dilation(mask_unique, structure = diamond, iterations=3).astype(mask_unique.dtype)
-        # FoxJ Channel
-            intensity_Fop = replace_intensity(dilated_mask, img_fop)
-            #foxj_arr = trim_array(intensity_foxj)
-        
-            statistics_Fop = nsitk.label_statistics(intensity_image=intensity_Fop, label_image=dilated_mask,
+                statistics_Fop = nsitk.label_statistics(intensity_image=intensity_Fop, label_image=dilated_mask,
                                             size = True, intensity = True, perimeter= True,
                                             shape= True, position= True)#, moments= True)
-            pd.DataFrame(statistics_Fop).to_excel(Result_folder+'(FOP)_' + filename +'_' + str(i)+'.xlsx')
+                pd.DataFrame(statistics_Fop).to_excel(Result_folder+'(FOP)_' + filename +'_' + str(i)+'.xlsx')
 
 
-        #print('nucelus_arr ---', nucelus_arr.shape)
-        # Nucleus Stats
-            statistics_nucleus = nsitk.label_statistics(intensity_image=img_nuclei, label_image=mask_unique,
+            #print('nucelus_arr ---', nucelus_arr.shape)
+            # Nucleus Stats
+                statistics_nucleus = nsitk.label_statistics(intensity_image=img_nuclei, label_image=mask_unique,
                                             size = True, intensity = True, perimeter= True,
                                             shape= True, position= True)#, moments= True)
-            pd.DataFrame(statistics_nucleus).to_excel(Result_folder+'(Nucleus)_' + filename +'_' + str(i)+'.xlsx')
+            
+                nucleus_Area = statistics_nucleus.loc[0, 'number_of_pixels']
+               
+                nucleus_Area = nucleus_Area *px_to_um_X* px_to_um_Y
+                statistics_nucleus['Nucleus Area'] = nucleus_Area 
+            
+                pd.DataFrame(statistics_nucleus).to_excel(Result_folder+'(Nucleus)_' + filename +'_' + str(i)+'.xlsx')
 
-        # Chromocenter Dots
-            normal_nucelus= replace_intensity(mask_unique, img_nuclei)
+        
+                normal_nucelus= replace_intensity(mask_unique, img_nuclei)
         
             #padding_nucleus_arr = trim_array(normal_nucelus)
-        # Get the shape difference between the two arrays
+            # Get the shape difference between the two arrays
             #shape_diff = np.subtract(foxj_arr.shape,padding_nucleus_arr.shape)
             #shape_diff = int(shape_diff[0]/2)
-        
-            intensity_map_norm = normalize_intensity(normal_nucelus)
-            intensity_map_blur = nsitk.median_filter(intensity_map_norm, radius_x=2, radius_y=2, radius_z=0)
-            intensity_map_thb = cle.top_hat_box(intensity_map_blur, None, 10.0, 10.0, 0.0)
+            # Napari Viewer
+            # viewer = napari.Viewer()
+            # viewer.add_image(normal_nucelus)
             
-            try:
-                intermodes_Threshold_Chromo = nsitk.threshold_intermodes(intensity_map_thb)
-                
-                statistics_Chromo = nsitk.label_statistics(intensity_image=img_nuclei, label_image=intermodes_Threshold_Chromo,
-                                                size = True, intensity = True, perimeter= True,
-                                                shape= True, position= True)#, moments= True)
+            # Nucleus_inten = normalize_intensity(normal_nucelus)
+                nucleus_thf = cle.top_hat_sphere(normal_nucelus, None, 10.0, 10.0, 0.0)
             
-                            
-                intermodes_chromo_Area = statistics_Chromo.loc[0, 'number_of_pixels']
-                chromointermodes_Area = intermodes_chromo_Area *px_to_um_X* px_to_um_Y
-                statistics_Chromo['Chromocenter Area'] = chromointermodes_Area 
-                print('Chromocenter_Area ---', chromointermodes_Area)
-                pd.DataFrame(statistics_Chromo).to_excel(Result_folder+'(Chromo)_' + filename + '_' + str(i)+'.xlsx')
-
-            except RuntimeError:
-                print("No Chromocenter Found")
+                nucleus_median = nsitk.median_filter(nucleus_thf, radius_x=2, radius_y=2, radius_z=0)
             
-            
-            # chromointermodes_Area = intermodes_chromo_Area *px_to_um_X* px_to_um_Y*px_to_um_Z
-            #
         
-        # Threshold isodata
-        # image2_T = nsitk.threshold_isodata(image1_gb)
-        # image3_T = nsitk.threshold_maximum_entropy(image1_gb)
-        
-        # Calculate the padding values for each dimension
-        #padding = [(0, diff) for diff in shape_diff]  # Pad with zeros
-
-        # Pad array1 to match the shape of array2
-        
-        # Normal nucleus
-        
-            #nucelus_arr = np.pad(padding_nucleus_arr, shape_diff, pad_with)
-        
-        # H3k27me3 Channel
-            intensity_h3k27me3 = replace_intensity(mask_unique, img_h3k27me3)
+            # H3k27me3 Channel
+                intensity_phosRB = replace_intensity(mask_unique, img_phosRB)
             #h3k27me3_trim = trim_array(intensity_h3k27me3)
             #h3k27me3_arr = np.pad(h3k27me3_trim, shape_diff, pad_with)
         
-            statistics_h3k27me3 = nsitk.label_statistics(intensity_image=intensity_h3k27me3, label_image=mask_unique,
+                statistics_phosRB = nsitk.label_statistics(intensity_image=intensity_phosRB, label_image=mask_unique,
                                             size = True, intensity = True, perimeter= True,
                                             shape= True, position= True)#, moments= True)
-            pd.DataFrame(statistics_h3k27me3).to_excel(Result_folder+'(H3K27me3)_' + filename+'_'+ str(i)+'.xlsx')
+                pd.DataFrame(statistics_phosRB).to_excel(Result_folder+'(PhosRB)_' + filename+'_'+ str(i)+'.xlsx')
         
         #h3k27me3_arr = np.pad(intensity_h3k27me3, padding,  constant_values=0, mode='constant')
         #intensity_h3k27me3 = replace_intensity(dilated_mask, img_h3k27me3)
@@ -330,34 +259,53 @@ for image in get_files:
         #h3k27me3_arr = ndi.binary_dilation(h3k27me3_trim, structure = diamond, iterations=2).astype(mask_unique.dtype)
         
         # FOP Channel
-            intensity_FoxJ = replace_intensity(mask_unique, img_foxj)
+                intensity_FoxJ = replace_intensity(mask_unique, img_foxj)
             #fop_trim = trim_array(intensity_fop)
             #fop_arr = np.pad(fop_trim, shape_diff, pad_with)
         
-            statistics_FoxJ = nsitk.label_statistics(intensity_image=intensity_FoxJ, label_image=mask_unique,
+                statistics_FoxJ = nsitk.label_statistics(intensity_image=intensity_FoxJ, label_image=mask_unique,
                                             size = True, intensity = True, perimeter= True,
                                             shape= True, position= True)#, moments= True)
-            pd.DataFrame(statistics_FoxJ).to_excel(Result_folder+'(FOXJ)_' + filename+'_'+ str(i)+'.xlsx')
+                pd.DataFrame(statistics_FoxJ).to_excel(Result_folder+'(FOXJ)_' + filename+'_'+ str(i)+'.xlsx')
 
         
         #fop_trim = trim_array(intensity_fop)
         #fop_arr = ndi.binary_dilation(fop_trim, structure = diamond, iterations=2).astype(mask_unique.dtype)
         
-        # Green with Far Red and then Red and Blue channel
-            merged_image = np.stack([intensity_h3k27me3, intensity_FoxJ,intensity_Fop, normal_nucelus], axis=0)
-            os.chdir(Result_folder)
-            OmeTiffWriter.save(merged_image,filename+'_'+ str(i) + ".tif")
-        
-        #print(image3_T.shape)
-        # viewer = napari.Viewer()
-        # ####viewer.add_image(merged_image)
-        # ####viewer.add_image(image2_T)
-        # ####viewer.add_image(image3_T)
-        # viewer.add_image(dilated_mask)
-        # viewer.add_image(img_nuclei)
-        # viewer.add_image(mask)
-        # viewer.add_image(clean_mask)
-        # viewer.add_image(mask_unique)
-        # viewer.add_image(intensity_h3k27me3)
-        # viewer.add_image(intensity_foxj)
+       
+                # Chromocenter Dots
+                try:
+                    chrom_MultiOTSU = threshold_multiotsu(nucleus_median)  
+                    ChromoSeg = nucleus_median > chrom_MultiOTSU[1]
+                    intensity_ChromoSeg = replace_intensity(mask_unique, ChromoSeg)
+                #os.chdir(Result_folder)
+                #OmeTiffWriter.save(intensity_ChromoSeg,'(ChormoTif)_' + filename+'_'+ str(i) + ".tif")
+                
+                # viewer.add_image(ChromoSeg)
+                    labeled_slice = measure.label(ChromoSeg)
+                    props = regionprops(labeled_slice)
+                    num_bright_spots = len(props)
+                    print('Chromocenter Dots Count ---', num_bright_spots)
+                    statistics_Chromo = nsitk.label_statistics(intensity_image=img_nuclei, label_image=ChromoSeg,
+                                                    size = True, intensity = True, perimeter= True,
+                                                    shape= True, position= True)#, moments= True)
+                                               
+                    intermodes_chromo_Area = statistics_Chromo.loc[0, 'number_of_pixels']
+                    chromointermodes_Area = intermodes_chromo_Area *px_to_um_X* px_to_um_Y
+                    statistics_Chromo['Chromocenter Area'] = chromointermodes_Area 
+                    statistics_Chromo['Chromocenter Spots'] = num_bright_spots
+                
+                    print('Chromocenter_Area ---', chromointermodes_Area)
+                    pd.DataFrame(statistics_Chromo).to_excel(Result_folder+'(Chromo)_' + filename + '_' + str(i)+'.xlsx')
 
+                    merged_image = np.stack([intensity_phosRB, intensity_FoxJ,intensity_Fop, normal_nucelus, intensity_ChromoSeg], axis=0)
+                    os.chdir(Result_folder)
+                    OmeTiffWriter.save(merged_image,filename+'_'+ str(i) + ".tif")                    
+                
+                except ValueError:               
+                    print("No Chromocenter Found")
+                
+                    merged_image = np.stack([intensity_phosRB, intensity_FoxJ,intensity_Fop, normal_nucelus], axis=0)
+                    os.chdir(Result_folder)
+                    OmeTiffWriter.save(merged_image,filename+'_'+ str(i) + ".tif")
+        
