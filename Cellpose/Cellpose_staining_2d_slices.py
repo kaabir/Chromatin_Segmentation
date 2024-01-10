@@ -60,9 +60,9 @@ def mid_Slice(img_stack):
 def folder_scan(directory):
     # Actin after 30min - value assigned is 3
     get_files = []
-    extension = ".czi"  # ".czi"
+    valid_extensions = (".czi", ".tif")  # ".czi"
     for f_name in os.listdir(directory):
-        if f_name.endswith(extension):
+        if f_name.endswith(valid_extensions):
             get_files.append(os.path.join(directory, f_name))
     return get_files
 
@@ -136,7 +136,7 @@ for folder_name in folder_list:
             img_phosRB = aics_image.get_image_data("ZYX", T=0, C=2) # LaminB1
             img_nuclei = aics_image.get_image_data("ZYX", T=0, C=3) # Nucleus  # Hoescht Channel
 
-            img_nuclei = np.max(img_nuclei, axis=0)
+        img_nuclei = np.max(img_nuclei, axis=0)
 
         if 'img_fop' in globals():
             img_fop = np.max(img_fop, axis=0)
