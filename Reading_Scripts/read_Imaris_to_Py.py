@@ -8,495 +8,281 @@ import glob
 import os
 import csv
 from pathlib import Path
-""" 
-Output
-├── Ctrl
-│   ├── T0
-│   │   ├── Nuclei├── Volume/Sphericity/
-│   │   └── Chromo└── Count/Volume/
-│   ├── T15...
-│   └── T30...
-└── VCA
-    ├── T0
-    │   ├── Nuclei├── Volume/Sphericity/
-    │   ├── Chromo├── Count/Volume/
-    │   └── Actin └── Area/
-    ├── T15...
-    └── T30...
-"""
+import numpy as np
+import re
 
-Imaris_vca = {"File_Name_VCA":[],"VCA_chromo_volume_0":[],"VCA_chromo_volume_1":[],"VCA_chromo_volume_2":[],"VCA_chromo_volume_3":[],
-           "VCA_chromo_count_0":[],"VCA_chromo_count_1":[],"VCA_chromo_count_2":[],"VCA_chromo_count_3":[],
-          "nuclei_vca_0":[],"nuclei_vca_1":[],"nuclei_vca_2":[],"nuclei_vca_3":[],
-           "actin_area_30":[],"actin_area_60":[],"sphericity_vca_0":[],"sphericity_vca_1":[],"sphericity_vca_2":[],"sphericity_vca_3":[]}
-
-
-Imaris_ctrl = {"File_Name_Ctrl":[],"Ctrl_chromo_volume_0":[],"Ctrl_chromo_volume_1":[],"Ctrl_chromo_volume_2":[],"Ctrl_chromo_volume_3":[],
-           "Ctrl_chromo_count_0":[],"Ctrl_chromo_count_1":[],"Ctrl_chromo_count_2":[],"Ctrl_chromo_count_3":[],
-           "nuclei_ctrl_0":[],"nuclei_ctrl_1":[],"nuclei_ctrl_2":[],"nuclei_ctrl_3":[],
-          "sphericity_ctrl_0":[],"sphericity_ctrl_1":[],"sphericity_ctrl_2":[],"sphericity_ctrl_3":[]}
-            
-# Type- Actin, Ctrl  && Time - T0,T15,T30,T60
-# =============================================================================
-# Sorting Files
-actin_files =[]
-chromo_files =[]
-nuclei_files = [] 
-def folder_Scan(Type,Time):
+def folder_Scan(folder_path= None, Type = None):
     # Actin after  30min  - value assigned is 3
-    directory = 'C:/Users/kaabi/Documents/Nuceli_Data/Imaris_to_Py/Output/'
+    
+    # Sorting Files
+    actin_files =[]
+    h3K9me2_files =[]
+    h3K27me3_files =[]
+    nuclei_files = [] 
+    chromo_files = [] 
+    
+    directory = folder_path
     os.chdir(directory)
-    global_path = glob.glob('*/*')
-    extension = 'csv'
+    global_path = glob.glob('*')
+    extension = 'xls'
     for g_name in global_path:
         # Scan Actin/Ctrl first
-        if g_name.startswith(Type) and g_name.endswith(Time):
+        if g_name.startswith(Type):
                 os.chdir(g_name)
-                path_local = glob.glob('*/*.{}'.format(extension))
+                path_local = glob.glob('*.{}'.format(extension))
                 for f_name in path_local:
                     #print(f_name)
-                    if f_name.startswith('(Chromo)'):
-                        chromo_files.append(f_name)
-                       # return chromo_files
-                    elif f_name.startswith('(NUC04)'):
+                    if f_name.startswith('(NUC04)'):
                         nuclei_files.append(f_name)
-                        #return nuclei_files
                     elif f_name.startswith('(Actin)'):
                         actin_files.append(f_name)
-                        #return actin_files
+                    elif f_name.startswith('(Chromo)'):
+                        chromo_files.append(f_name)
+                    elif f_name.startswith('(H3k27me3)'):
+                        h3K27me3_files.append(f_name)
+                    elif f_name.startswith('(H3k9me2)'):
+                        h3K27me3_files.append(f_name)                          
                     else:
-                        print('Some random file or folders in the directory')
+                        print('Some random file or folders in the directory',f_name)
                         
-# =============================================================================                      
-def actin_Coverage(Nuc_Area,Actin_Area):
-    # Get Percentage Cover
-    Nuclei_area_den = list(map(float, Nuc_Area))
-    Act_area_to_Flt = list(map(float, Actin_Area))
-    value = 2
-    Area_Div = [x / value for x in Act_area_to_Flt]      
-    Actin_area_num = []
-    for i in Area_Div :
-        Actin_area_num.append(i * 100)
-    # get last index for the lists for iteration
-    end_index = len(Actin_area_num)
-    for i in range(end_index):
-        Actin_coverage_per = (Actin_area_num[i]/Nuclei_area_den[i])
-    return Actin_coverage_per
-    #Actin_coverage_per.clear()
-# =============================================================================
+    return actin_files, h3K9me2_files, h3K27me3_files, nuclei_files, chromo_files
+                                         
 # Reading CSV
 def read_CSV(fil_Nam):
-     filename_delimiter = ','
-     largest_column_count = 0
-     with open(fil_Nam) as temp_fil:
-         #col_count = list(map(len(l.split(",")), temp_f.readlines())) # where do I get index
-         col_count = [ len(l.split(",")) for l in temp_fil.readlines() ]
-         column_names = [j for j in range(0, max(col_count))]
-         df = pd.DataFrame()
-         df = pd.read_csv(fil_Nam, delimiter=",", names=column_names)
-         df.columns = df.iloc[2]
-         df = df[3:]
-         df = df.set_index(df.columns[0])
-     return df
-     df.clear()
-# =============================================================================
-def get_Filename(fil_Str):
-    #filename = Path(file_path).stem
-    File_Name=fil_Str[50:]
-    index = File_Name.find('Average') # Find endswith key to locate the image number
-    index = index - 6 # -3 if no double no.
-    File_Name = File_Name[index:index+5] #+2 if no double no.
-    File_Name = File_Name.split(',') 
-    File_Name = File_Name[0] #extracts the first field
-    return File_Name
+    filename_delimiter = ','
+    largest_column_count = 0
 
-# ===============
-# Actin Channel
-# ===============
-#### T0
-actin_files0 = folder_Scan('Actin','T0') # Scan
-ChromoNameT0 = []
-for chromoread in chromo_files:
-    ChromoNameT0.append(chromoread)
-    AC_Chromoread_TO = read_CSV(chromoread)
-    Imaris_vca["File_Name_VCA"].append(get_Filename(chromoread))
-    Imaris_vca["VCA_chromo_volume_0"].append(AC_Chromoread_TO.loc['Volume','Sum'])
-    Imaris_vca["VCA_chromo_count_0"].append(AC_Chromoread_TO.loc['Volume','Count'])
-chromo_files.clear() 
-
-# Nuclei Read
-Nuclei_area_T0 = []
-NucleiNameT0 = []  
-for nucleiread in nuclei_files:
-    NucleiNameT0.append(nucleiread)
-    AC_nuclei_TO = read_CSV(nucleiread)
-    Imaris_vca["nuclei_vca_0"].append(AC_nuclei_TO.loc['Volume','Sum'])
-    Nuclei_area_T0.append(AC_nuclei_TO.loc['Area','Sum'])
-    Imaris_vca["sphericity_vca_0"].append(AC_nuclei_TO.loc['Sphericity','Mean']) 
-
-# Actin Read
-Actin_area_T0 = []  #No area at T0
-for actinread in actin_files:
-    AC_actin_TO = read_CSV(actinread)
-    Actin_area_T0.append(AC_actin_TO.loc['Area','Sum'])
-# Save original filname to compare for next time frame    
-ActiniNameT0 = []    
-# Taking reference from Nuclei for Actin (No actin at T0)
-for actinread in NucleiNameT0:    
-    _ = actinread.replace("(NUC04)", "(Actin)",2)
-    ActiniNameT0.append(_)
-    
-nuclei_files.clear()    
-actin_files.clear()  
-
-#### T30 ####
-
-actin_files30 = folder_Scan('Actin','T30')  # Scan
-
-# Chromocenter Read
-ChromoNameT1 = []
-for chromoread in chromo_files:  
-    ChromoNameT1.append(chromoread)
-
-# Adds files of T0 and T30 and replaces it with none in case no file
-ChromoTrack1 = []
-for element in ChromoNameT0:
-    if element in ChromoNameT1:
-        ChromoTrack1.append(element)
-    else:
-        ChromoTrack1.append(None)
-
-for chromoread in ChromoTrack1:  
-    if not (chromoread is None):
-        AC_Chromoread_T30 = read_CSV(chromoread)
-        Imaris_vca["VCA_chromo_volume_1"].append(AC_Chromoread_T30.loc['Volume','Sum'])
-        Imaris_vca["VCA_chromo_count_1"].append(AC_Chromoread_T30.loc['Volume','Count'])
-    else:
-        Imaris_vca["VCA_chromo_volume_1"].append(None)
-        Imaris_vca["VCA_chromo_count_1"].append(None)
-chromo_files.clear() 
-
-# Nuclei Read
-NucleiNameT1 = []
-for nucleiread in nuclei_files:  
-    NucleiNameT1.append(nucleiread)
-
-# Adds files of T0 and T30 and replaces it with none in case no file
-NucleiTrack1 = []
-for element in NucleiNameT0:
-    if element in NucleiNameT1:
-        NucleiTrack1.append(element)
-    else:
-        NucleiTrack1.append(None)
-		
-Nuclei_area_T30 = []
-for nucleiread in NucleiTrack1:  
-    if not (nucleiread is None):
-        AC_nuclei_T30 = read_CSV(nucleiread)
-        Imaris_vca["nuclei_vca_1"].append(AC_nuclei_T30.loc['Volume','Sum'])
-        Imaris_vca["sphericity_vca_1"].append(AC_nuclei_T30.loc['Sphericity','Mean'])
-        Nuclei_area_T30.append(AC_nuclei_T30.loc['Area','Sum'])
-    else:
-        Imaris_vca["nuclei_vca_1"].append(None)
-        Imaris_vca["sphericity_vca_1"].append(None)
-        Nuclei_area_T30.append(None)
-nuclei_files.clear()  
-
-# Actin Read
-# Save original filname to compare for next time frame    
-ActiniNameT1 = []    
-# Taking reference from Nuclei for Actin (No actin at T0)
-for actinread in NucleiNameT1:    
-    _ = actinread.replace("(NUC04)", "(Actin)",2)
-    ActiniNameT1.append(_)
-# Actin Read
-
-ActinTrack1 = []
-for element in ActiniNameT0:
-    if element in ActiniNameT1:
-        ActinTrack1.append(element)
-    else:
-        ActinTrack1.append(None)
-		
-Actin_area_T30 = [] 
-for actinread in ActinTrack1:  
-    if not (actinread is None):
-        AC_nuclei_T30 = read_CSV(actinread)
-        Actin_area_T30.append(AC_nuclei_T30.loc['Area','Sum'])
-        Imaris_vca["actin_area_30"].append(actin_Coverage(Nuclei_area_T30,Actin_area_T30))
-    else:
-        Imaris_vca["actin_area_30"].append(None)
-actin_files.clear() 
-
-#### T60 ####
-
-actin_files60 = folder_Scan('Actin','T60')  # Scan
-
-# Chromocenter Read
-ChromoNameT2 = []
-for chromoread in chromo_files:  
-    ChromoNameT2.append(chromoread)
-
-# Adds files of T0 and T6 and replaces it with none in case no file
-ChromoTrack2 = []
-for element in ChromoNameT0:
-    if element in ChromoNameT2:
-        ChromoTrack2.append(element)
-    else:
-        ChromoTrack2.append(None)
-
-for chromoread in ChromoTrack2:  
-    if not (chromoread is None):
-        AC_Chromoread_T60 = read_CSV(chromoread)
-        Imaris_vca["VCA_chromo_volume_2"].append(AC_Chromoread_T60.loc['Volume','Sum'])
-        Imaris_vca["VCA_chromo_count_2"].append(AC_Chromoread_T60.loc['Volume','Count'])
-    else:
-        Imaris_vca["VCA_chromo_volume_2"].append(None)
-        Imaris_vca["VCA_chromo_count_2"].append(None)
-chromo_files.clear() 
-
-# Nuclei Read
-NucleiNameT2 = []
-for nucleiread in nuclei_files:  
-    NucleiNameT2.append(nucleiread)
-
-# Adds files of T0 and T30 and replaces it with none in case no file
-NucleiTrack2 = []
-for element in NucleiNameT0:
-    if element in NucleiNameT2:
-        NucleiTrack2.append(element)
-    else:
-        NucleiTrack2.append(None)
-		
-Nuclei_area_T60 = []
-for nucleiread in NucleiTrack2:  
-    if not (nucleiread is None):
-        AC_nuclei_T60 = read_CSV(nucleiread)
-        Imaris_vca["nuclei_vca_2"].append(AC_nuclei_T60.loc['Volume','Sum'])
-        Imaris_vca["sphericity_vca_2"].append(AC_nuclei_T60.loc['Sphericity','Mean'])
-        Nuclei_area_T60.append(AC_nuclei_T60.loc['Area','Sum'])
-    else:
-        Imaris_vca["nuclei_vca_2"].append(None)
-        Imaris_vca["sphericity_vca_2"].append(None)
-        Nuclei_area_T60.append(None)
-nuclei_files.clear()  
-
-# Actin Read
-# Save original filname to compare for next time frame    
-ActiniNameT2 = []    
-# Taking reference from Nuclei for Actin (No actin at T0)
-for actinread in NucleiNameT1:    
-    _ = actinread.replace("(NUC04)", "(Actin)",2)
-    ActiniNameT2.append(_)
-# Actin Read
-
-ActinTrack2 = []
-for element in ActiniNameT0:
-    if element in ActiniNameT2:
-        ActinTrack2.append(element)
-    else:
-        ActinTrack2.append(None)
-		
-Actin_area_T60 = [] 
-for actinread in ActinTrack1:  
-    if not (actinread is None):
-        AC_nuclei_T60 = read_CSV(actinread)
-        Actin_area_T60.append(AC_nuclei_T60.loc['Area','Sum'])
-        Imaris_vca["actin_area_60"].append(actin_Coverage(Nuclei_area_T60,Actin_area_T60))
-    else:
-        Imaris_vca["actin_area_60"].append(None)
-actin_files.clear() 
-
-ChromoNameT0.clear()
-ChromoNameT1.clear() 
-NucleiNameT0.clear() 
-NucleiNameT2.clear() 
-NucleiNameT1.clear() 
-ChromoTrack1.clear()
-ChromoTrack2.clear()
-
-# ===============
-# Control Channel
-# ===============
-#### T0
-
-ctrl_files0 = folder_Scan('Ctrl','T0') # Scan
-
-ChromoNameT0 = []
-for chromoread in chromo_files:
-    ChromoNameT0.append(chromoread)
-    CT_Chromoread_TO = read_CSV(chromoread)
-    Imaris_ctrl["File_Name_Ctrl"].append(get_Filename(chromoread))
-    Imaris_ctrl["Ctrl_chromo_volume_0"].append(CT_Chromoread_TO.loc['Volume','Sum'])
-    Imaris_ctrl["Ctrl_chromo_count_0"].append(CT_Chromoread_TO.loc['Volume','Count']) 
-chromo_files.clear() 
-
-# Nuclei Read
-NucleiNameT0 =[]
-for nucleiread in nuclei_files:
-    NucleiNameT0.append(nucleiread)
-    CT_nuclei_TO = read_CSV(nucleiread)
-    Imaris_ctrl["nuclei_ctrl_0"].append(CT_nuclei_TO.loc['Volume','Sum'])
-    Imaris_ctrl["sphericity_ctrl_0"].append(CT_nuclei_TO.loc['Sphericity','Mean'])
-nuclei_files.clear()    
-
-  
-# Nuclei Read
-for nucleiread in nuclei_files:
-    CT_nuclei_T3O = read_CSV(nucleiread)
-    Imaris_ctrl["nuclei_ctrl_1"].append(CT_nuclei_T3O.loc['Volume','Sum'])
-    Imaris_ctrl["sphericity_ctrl_1"].append(CT_nuclei_T3O.loc['Sphericity','Mean']) 
-nuclei_files.clear()  
-
-#### T30 ####
-ctrl_files30 = folder_Scan('Ctrl','T30') # Scan
-# Chromocenter Read
-ChromoNameT1 = []
-for chromoread in chromo_files:  
-    ChromoNameT1.append(chromoread)
-
-# Adds files of T0 and T30 and replaces it with none in case no file
-ChromoTrack1 = []
-for element in ChromoNameT0:
-    if element in ChromoNameT1:
-        ChromoTrack1.append(element)
-    else:
-        ChromoTrack1.append(None)
-
-for chromoread in ChromoTrack1:  
-    if not (chromoread is None):
-        CT_Chromoread_T3O = read_CSV(chromoread)
-        Imaris_ctrl["Ctrl_chromo_volume_1"].append(CT_Chromoread_T3O.loc['Volume','Sum'])
-        Imaris_ctrl["Ctrl_chromo_count_1"].append(CT_Chromoread_T3O.loc['Volume','Count'])
-    else:
-        Imaris_ctrl["Ctrl_chromo_volume_1"].append(None)
-        Imaris_ctrl["Ctrl_chromo_count_1"].append(None)
-chromo_files.clear() 
-
-# Nuclei Read
-NucleiNameT1 = []
-for nucleiread in nuclei_files:  
-    NucleiNameT1.append(nucleiread)
-
-# Adds files of T0 and T30 and replaces it with none in case no file
-NucleiTrack1 = []
-for element in NucleiNameT0:
-    if element in NucleiNameT1:
-        NucleiTrack1.append(element)
-    else:
-        NucleiTrack1.append(None)
-		
-Nuclei_area_T30 = []
-for nucleiread in NucleiTrack1:  
-    if not (nucleiread is None):
-        CT_nuclei_T3O = read_CSV(nucleiread)
-        Imaris_ctrl["nuclei_ctrl_1"].append(CT_nuclei_T3O.loc['Volume','Sum'])
-        Imaris_ctrl["sphericity_ctrl_1"].append(CT_nuclei_T3O.loc['Sphericity','Mean']) 
-    else:
-        Imaris_ctrl["nuclei_ctrl_1"].append(None)
-        Imaris_ctrl["sphericity_ctrl_1"].append(None)
-        Nuclei_area_T30.append(None)
-nuclei_files.clear()  
-#### T60 #### 
-ctrl_files60 = folder_Scan('Ctrl','T60')  # Scan
-
-# Chromocenter Read
-ChromoNameT2 = []
-for chromoread in chromo_files:  
-    ChromoNameT2.append(chromoread)
-chromo_files.clear() 
-# Adds files of T0 and T6 and replaces it with none in case no file
-ChromoTrack2 = []
-for element in ChromoNameT0:
-    if element in ChromoNameT2:
-        ChromoTrack2.append(element)
-    else:
-        ChromoTrack2.append(None)
-
-for chromoread in ChromoTrack2:  
-    if not (chromoread is None):
-        CT_Chromoread_T6O = read_CSV(chromoread)
-        Imaris_ctrl["Ctrl_chromo_volume_2"].append(CT_Chromoread_T6O.loc['Volume','Sum'])
-        Imaris_ctrl["Ctrl_chromo_count_2"].append(CT_Chromoread_T6O.loc['Volume','Count'])
-    else:
-        Imaris_ctrl["Ctrl_chromo_volume_2"].append(None)
-        Imaris_ctrl["Ctrl_chromo_count_2"].append(None)
+    with open(fil_Nam) as temp_fil:
+        # Get the maximum column count from any row
+        for line in temp_fil:
+            column_count = len(line.split(filename_delimiter))
+            largest_column_count = max(largest_column_count, column_count)
         
-# Nuclei Read
-NucleiNameT2 = []
-for nucleiread in nuclei_files:  
-    NucleiNameT2.append(nucleiread)
+        # Read the CSV file without specifying column names
+        df = pd.read_csv(fil_Nam, delimiter=filename_delimiter, header=None, skiprows=3, index_col=0)
 
-# Adds files of T0 and T30 and replaces it with none in case no file
-NucleiTrack2 = []
-for element in NucleiNameT0:
-    if element in NucleiNameT2:
-        NucleiTrack2.append(element)
-    else:
-        NucleiTrack2.append(None)
-		
-Nuclei_area_T60 = []
-for nucleiread in NucleiTrack2:  
-    if not (nucleiread is None):
-        CT_nuclei_T6O = read_CSV(nucleiread)
-        Imaris_ctrl["nuclei_ctrl_2"].append(CT_nuclei_T6O.loc['Volume','Sum'])
-        Imaris_ctrl["sphericity_ctrl_2"].append(CT_nuclei_T6O.loc['Sphericity','Mean'])
-    else:
-        Imaris_ctrl["nuclei_ctrl_2"].append(None)
-        Imaris_ctrl["sphericity_ctrl_2"].append(None)
-nuclei_files.clear()  
+    # Assign the values of the first row as column names
+    df.columns = df.iloc[0]
 
-# Export Ctrl Data 
-with open ('C:/Users/kaabi/Documents/Nuceli_Data/Imaris_to_Py/Output/Export_Ctrl.csv','w', newline='') as csv_file:
-    csv.writer(csv_file).writerows([k, *v] for k,v in Imaris_ctrl.items())
+    # Drop the first row since it's now used as column names
+    df = df[1:]  
     
-df_ctrl = pd.DataFrame.from_dict(Imaris_ctrl, orient='index')
-df_ctrl = df_ctrl.transpose()
+    return df
 
-colsCtrl = ['nuclei_ctrl_0', 'nuclei_ctrl_1', 'nuclei_ctrl_2','nuclei_ctrl_3']
-df_ctrl[colsCtrl] = df_ctrl[colsCtrl].apply(pd.to_numeric, errors='coerce', axis=1)
-df_ctrl['Ratio1'] = df_ctrl['nuclei_ctrl_0']/df_ctrl['nuclei_ctrl_1']
-df_ctrl['Ratio2'] = df_ctrl['nuclei_ctrl_0']/df_ctrl['nuclei_ctrl_2']
+def combined_metric(Ch_intensity=None,Ch_inten_weight=None, Ch_vol=None,Ch_vol_weight=None, nuc_volume=None):
 
-# Sort based on Nuclei shrinkage >1.2  or <1.2 if inflates
-Ctrl_O_R2 = df_ctrl[df_ctrl['Ratio2'] > 1.2]
-pd.DataFrame(Ctrl_O_R2).to_excel('C:/Users/kaabi/Documents/Nuceli_Data/Imaris_to_Py/Output/Export_Ctrl_O_R2.xlsx')
-Ctrl_L_R2 = df_ctrl[df_ctrl['Ratio2'] < 1.2]
-pd.DataFrame(Ctrl_L_R2).to_excel('C:/Users/kaabi/Documents/Nuceli_Data/Imaris_to_Py/Output/Export_Ctrl_L_R2.xlsx')
+    #den = intens/volume
+    #density = (Ch_inten_weight * Ch_intensity) /(Ch_vol_weight * Ch_vol)
+    combined_metric = Ch_vol/ nuc_volume
+    return combined_metric
 
-pd.DataFrame(df_ctrl).to_excel('C:/Users/kaabi/Documents/Nuceli_Data/Imaris_to_Py/Output/Export_Ctrl_Excel.xlsx')
 
-# Export Actin Data
-with open ('C:/Users/kaabi/Documents/Nuceli_Data/Imaris_to_Py/Output/Export_VCA.csv','w', newline='') as csv_file:
-    csv.writer(csv_file).writerows([k, *v] for k,v in Imaris_vca.items())
+def calculate_frequency_distr(position_input, volume_input, num_bins=None):
+    """
+    Calculate frequency distribution and mean volume values for given position and volume data.
+    
+    Parameters:
+        position_values (list): List of position values.
+        volume_values (list): List of volume values.
+        num_bins (int): Number of bins for position values. Default is 8.
+    
+    Returns:
+        combined_df (DataFrame): DataFrame containing frequency distribution and mean volume values.
+    """
+    dfs = []
+    for volume_vals, position_vals in zip(volume_input, position_input):
+        df = pd.DataFrame({'Position': position_vals, 'Volume': volume_vals})
+        dfs.append(df)
 
-df_actin = pd.DataFrame.from_dict(Imaris_vca, orient='index')
-df_actin = df_actin.transpose()
+    # Merge DataFrames based on a common identifier or index if available
+    merged_df = pd.concat(dfs, ignore_index=True)
 
-colsActin = ['nuclei_vca_0', 'nuclei_vca_1', 'nuclei_vca_2','nuclei_vca_3']
-df_actin[colsActin] = df_actin[colsActin].apply(pd.to_numeric, errors='coerce', axis=1)
-df_actin['Ratio1'] = df_actin['nuclei_vca_0']/df_actin['nuclei_vca_1']
-df_actin['Ratio2'] = df_actin['nuclei_vca_0']/df_actin['nuclei_vca_2']
+    # Define bins for position values
+    position_values = merged_df['Position']
+    volume_values = merged_df['Volume']
 
-pd.DataFrame(df_actin).to_excel('C:/Users/kaabi/Documents/Nuceli_Data/Imaris_to_Py/Output/Export_VCA_Excel.xlsx')
-# Sort Based on Coverage Percentage
-Actin_L_30 = df_actin[df_actin['actin_area_30'] < 30]
-#Actin_L_30.to_csv(index=False, path_or_buf='C:/Users/kaabi/Documents/Nuceli_Data/Imaris_to_Py/Output/Actin_Low_30.csv')
-Actin_L_30_R2 = Actin_L_30[Actin_L_30['Ratio2'] > 1.2]
-pd.DataFrame(Actin_L_30_R2).to_excel('C:/Users/kaabi/Documents/Nuceli_Data/Imaris_to_Py/Output/Export_Actin_Low_30_Over_SHR_1p2_R2.xlsx')
-Actin_L_30_R1 = Actin_L_30[Actin_L_30['Ratio2'] < 1.2]
-pd.DataFrame(Actin_L_30_R1).to_excel('C:/Users/kaabi/Documents/Nuceli_Data/Imaris_to_Py/Output/Export_Actin_Low_30_Less_noShrink_1p2_R2.xlsx')
+    num_bins = num_bins  # Adjust the number of bins as needed
+    bins = pd.cut(position_values, bins=num_bins, include_lowest=True)
 
-pd.DataFrame(Actin_L_30).to_excel('C:/Users/kaabi/Documents/Nuceli_Data/Imaris_to_Py/Output/Actin_Low_30.xlsx')
-Actin_B_30_to_70 = df_actin[df_actin['actin_area_60'].between(30, 70, inclusive="both")]
-#Actin_B_30_to_70.to_csv(index=False, path_or_buf='C:/Users/kaabi/Documents/Nuceli_Data/Imaris_to_Py/Output/Actin_Bt_30_to_70.csv')
-Actin_O_70 = df_actin[df_actin['actin_area_60'] > 70]
-#Actin_O_70.to_csv(index=False, path_or_buf='C:/Users/kaabi/Documents/Nuceli_Data/Imaris_to_Py/Output/Actin_Ovr_70.csv')
-Actin_O_30 = df_actin[df_actin['actin_area_30'] > 30]
-Actin_O_30.to_csv(index=False, path_or_buf='C:/Users/kaabi/Documents/Nuceli_Data/Imaris_to_Py/Output/Actin_Ovr_30.csv')
+    # Create a DataFrame to store position, volume, and their corresponding bins
+    data = pd.DataFrame({'Position': position_values, 'Volume': volume_values, 'Position_Bin': bins})
 
-# Sort based on Nuclei shrinkage >1.2  or <1.2 if inflates
-Actin_O_30_O_R2 = Actin_O_30[Actin_O_30['Ratio2'] > 1.2]
-pd.DataFrame(Actin_O_30_O_R2).to_excel('C:/Users/kaabi/Documents/Nuceli_Data/Imaris_to_Py/Output/Export_Actin_Ovr_30_SHR_1p2_R2.xlsx')
-Actin_O_30_L_R2 = Actin_O_30[Actin_O_30['Ratio2'] < 1.2]
-pd.DataFrame(Actin_O_30_L_R2).to_excel('C:/Users/kaabi/Documents/Nuceli_Data/Imaris_to_Py/Output/Export_Actin_Ovr_30_Less_noShrink_1p2_R2.xlsx')
+    # Calculate frequency distribution for each bin
+    frequency_distribution = data['Position_Bin'].value_counts().sort_index()
+
+    # Calculate relative frequency percentage for each bin
+    relative_frequency_percentage = frequency_distribution / len(position_values) * 100
+
+    # Group data by position bins and calculate mean volume value for each bin
+    grouped_data = data.groupby('Position_Bin')['Volume'].mean()
+
+    # Convert frequency distribution and mean volume values to DataFrames
+    combined_df = pd.DataFrame({'Position_Bin': frequency_distribution.index, 'Frequency': frequency_distribution.values})
+    
+    # Convert Interval objects to strings and adjust labels
+    combined_df['Position_Bin'] = combined_df['Position_Bin'].apply(lambda x: round((x.left + x.right) / 2, 3))
+    combined_df['Position_Bin'] = combined_df['Position_Bin'].astype(str) 
+    
+    combined_df['Mean_Volume'] = grouped_data.values
+
+    # Output the combined DataFrame
+    print(combined_df)
+    #return combined_df['Position_Bin'], combined_df['Frequency'], combined_df['Mean_Volume']
+    return combined_df
+
+def process_string(input_string, marker = None):
+    # Find the last occurrence of "(Chromo)"or "(Actin)" or "(NUC04)"
+    # 
+    directory = os.path.splitext(input_string)[0]
+    #print(directory)
+    path = os.path.basename(directory)
+    #print(path)
+    identifier = path.split(marker)[1]
+    #print(identifier)
+    
+    return identifier
+
+def ProcessData(FolderType=None, folder_path=None):
+    print(FolderType)
+    Imaris_Type = {}
+    # nuclei_channel = 1
+
+    actin_files, h3K9me2_files, h3K27me3_files, nuclei_files, chromo_files = folder_Scan(folder_path, FolderType)
+
+    # Nucleus Read
+    for nucleiread in nuclei_files:
+        file_name = process_string(nucleiread, marker="(NUC04)")
+        
+        print(nucleiread)
+        if file_name not in Imaris_Type:
+            Imaris_Type[file_name] = {}
+        
+        # Read the entire Excel file with sheets
+        ## Nucleus Volume
+        nuc_excel = pd.ExcelFile(nucleiread)
+        df = pd.read_excel(nuc_excel, sheet_name='Volume', header=1)      
+        Imaris_Type[file_name]['Nuclei Volume'] = df['Volume'].sum()
+        df = pd.read_excel(nuc_excel, sheet_name='Area', header=1)      
+        Imaris_Type[file_name]['Nuclei Area'] = df['Area'].sum()
+        df = pd.read_excel(nuc_excel, sheet_name='Sphericity', header=1)
+        Imaris_Type[file_name]['Nuclei Sphericity'] = df['Sphericity'].sum()
+        
+        # Nucleus Intensity Read
+        sheet_names = nuc_excel.sheet_names
+        #print(sheet_names)
+        # Last Channel is Nuclei == Maximum channel
+        max_channel = max(int(name.split('Ch=')[1].split()[0]) for name in sheet_names if 'Intensity Mean' in name)
+        # Construct the target sheet name
+        target_sheet_name = f'Intensity Mean Ch={max_channel} Img=1'
+        # Read the specified sheet
+        nuc_inten = pd.read_excel(nuc_excel, sheet_name=target_sheet_name, header=1)
+        Imaris_Type[file_name]['Nuclei Intensity'] = nuc_inten['Intensity Mean'].sum()
+    
+    # Chromocenter Read           
+    for chromoread in chromo_files:
+        file_name = process_string(chromoread, marker="(Chromo)")
+        #print(file_name)
+        if file_name not in Imaris_Type:
+            Imaris_Type[file_name] = {}
+        chromo_excel = pd.ExcelFile(chromoread)    
+        df = pd.read_excel(chromo_excel, sheet_name='Volume', header=1)
+        Imaris_Type[file_name]['Chromocenter Volume'] = df['Volume'].sum()
+        
+        chroVol_values = df['Volume'].values#.flatten()#.reshape(-1, 1)
+        Imaris_Type[file_name]['Chromocenter Volume Values'] = chroVol_values
+        # Coordinates of chromocenters to the nucleus surface 
+        # Shortest Distance to Surfac-88
+        
+        sheet_names = chromo_excel.sheet_names
+
+        # Last Channel is Chromocenter == Maximum channel
+        max_channel = max(int(name.split('Ch=')[1].split()[0]) for name in sheet_names if 'Intensity Mean' in name)
+        # Construct the target sheet name
+        target_sheet_name = f'Intensity Mean Ch={max_channel} Img=1'
+        # Read the specified sheet
+        chromo_inten = pd.read_excel(chromo_excel, sheet_name=target_sheet_name, header=1)
+        Imaris_Type[file_name]['Chromocenter Intensity Values'] = chromo_inten['Intensity Mean'].values.flatten()#.sum()
+        Imaris_Type[file_name]['Chromocenter Mean'] = chromo_inten['Intensity Mean'].sum()
+        # Find the maximum channel number
+        max_channel = max(int(name.split('Shortest Distance to Surfac-')[1].split()[0]) for name in sheet_names if 'Shortest Distance to Surfac-' in name)
+
+        for target_channel in range(max_channel, 0, -1):
+    # Construct the target sheet name
+            target_sheet_name = f'Shortest Distance to Surfac-{target_channel}'
+
+            try:
+        # Read the specified sheet
+                df_coordinates = pd.read_excel(chromo_excel, sheet_name=target_sheet_name)
+        
+        # Check if the desired column exists
+                if 'Shortest Distance to Surfaces Surfaces=nuc' in df_coordinates.columns:
+                    df_coordinates = pd.read_excel(chromo_excel, sheet_name=target_sheet_name, skiprows=1)
+                    Imaris_Type[file_name]['Chromocenter Distance to Borders'] = df_coordinates['Shortest Distance to Surfaces'].values.flatten()
+    
+                    collected_positions = df_coordinates['Shortest Distance to Surfaces'].tolist()  # Convert to list
+                    #print(collected_positions)
+                    # This divides the data in three bins of range from -1 to 0
+                    bins = [-1, -0.7, -0.4, 0]
+                    categories = []
+                    bins_aggregated = []
+
+                    for i in range(len(bins) - 1):
+                        lower_bound = bins[i]
+                        upper_bound = bins[i + 1]
+        
+                        count = len([val for val in collected_positions if lower_bound <= val < upper_bound])
+                        categories.append(f'{lower_bound}-{upper_bound}')
+                        bins_aggregated.append(count)
+                    # Center = (bins_aggregated[0]/ sum(bins_aggregated)) *100 Frequency percentage of each region
+                    Imaris_Type[file_name]['Center'] = (bins_aggregated[0]/ sum(bins_aggregated)) *100#bins_aggregated[0]
+                    Imaris_Type[file_name]['Inside'] = (bins_aggregated[1]/ sum(bins_aggregated)) *100#bins_aggregated[1]
+                    Imaris_Type[file_name]['Edge'] = (bins_aggregated[2]/ sum(bins_aggregated)) *100#bins_aggregated[2]              
+
+                    #print(bins_aggregated)
+                    break
+
+            except ValueError:
+                
+        # Handle the case when the sheet cannot be read
+                print(f"Error reading sheet: {target_sheet_name}")
+
+    df = pd.DataFrame.from_dict(Imaris_Type, orient='index')
+    
+    df['Chromo Foci Density'] = combined_metric(Ch_intensity=df['Chromocenter Mean'],Ch_inten_weight=0.6, Ch_vol=df['Chromocenter Volume'],Ch_vol_weight=0.4, nuc_volume=df['Nuclei Volume'])   
+    
+    return df
+
+folder_path = 'E:/Quantified/Agarose Compression/[Imaris 3D] 240207 e230926 OF1 D6 Tf shNeg Gfop Rdsred FRfoxj1/Result/'
+
+#df_actin = ProcessData(FolderType= 'spVCA_but_no_Actin', folder_path = folder_path)
+df_Diff = ProcessData(FolderType= 'Diff', folder_path = folder_path)
+freq_diff_df = calculate_frequency_distr(df_Diff['Chromocenter Distance to Borders'], df_Diff['Chromocenter Volume Values'], num_bins=22)
+df_Diff = pd.concat([df_Diff, freq_diff_df], axis=1)
+
+# Multiciliated Cells
+df_Multi_EC = ProcessData(FolderType= 'Multi_EC', folder_path = folder_path)
+freq_Multi_df = calculate_frequency_distr(df_Multi_EC['Chromocenter Distance to Borders'], df_Multi_EC['Chromocenter Volume Values'], num_bins=22)
+df_Multi_EC = pd.concat([df_Multi_EC, freq_Multi_df], axis=1)
+# Radial Glial Cells
+df_RGC = ProcessData(FolderType= 'RGC', folder_path = folder_path)
+freq_RGC_df = calculate_frequency_distr(df_RGC['Chromocenter Distance to Borders'], df_RGC['Chromocenter Volume Values'], num_bins=22)
+df_RGC = pd.concat([df_RGC,freq_RGC_df], axis=1)
+
+# # Export Ctrl Data 
+Result_folder = os.path.join(folder_path)#, 'Result')
+if not os.path.exists(Result_folder):
+    os.makedirs(Result_folder)
+
+# Export the DataFrame to an Excel file
+df_Diff.to_excel(Result_folder + '/Export_Diff_Stage.xlsx')  
+df_Multi_EC.to_excel(Result_folder + '/Export_Multi_Stage.xlsx')
+df_RGC.to_excel(Result_folder + '/Export_RGC_Stage.xlsx')
+#df_14percent.to_excel(Result_folder + '/Export_14percent_Excel.xlsx')  
+
+# df_actin.to_excel(Result_folder + '/Export_Actin_Excel.xlsx')
+# # # Sort Based on Coverage Percentage
+# Actin_L_30 = df_actin[df_actin['Actin Coverage'] < 30]
+
+# Actin_L_30.to_excel(Result_folder + '/Actin_Less_30.xlsx')
+# Actin_O_30 = df_actin[df_actin['Actin Coverage'] > 30]
+# Actin_O_30.to_excel(Result_folder + '/Actin_Over_30.xlsx')    
